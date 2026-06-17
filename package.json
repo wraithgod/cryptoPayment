@@ -1,0 +1,59 @@
+{
+  "name": "crypto-payment-gateway",
+  "version": "1.0.0",
+  "description": "Crypto payment processing gateway supporting ETH, BSC, TRON, Solana",
+  "main": "dist/index.js",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "worker": "ts-node-dev --respawn --transpile-only src/worker.ts"
+  },
+  "dependencies": {
+    "@bull-board/api": "^5.23.0",
+    "@bull-board/fastify": "^5.23.0",
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "@fastify/static": "^7.0.4",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^3.1.0",
+    "@prisma/client": "^5.15.0",
+    "@scalar/fastify-api-reference": "^1.57.0",
+    "@solana/spl-token": "^0.4.8",
+    "@solana/web3.js": "^1.95.3",
+    "bip32": "^4.0.0",
+    "bip39": "^3.1.0",
+    "bs58": "^5.0.0",
+    "bullmq": "^5.12.12",
+    "dotenv": "^17.4.2",
+    "ed25519-hd-key": "^1.3.0",
+    "ethers": "^6.13.2",
+    "fastify": "^4.28.1",
+    "ioredis": "^5.4.1",
+    "pino": "^9.3.2",
+    "tiny-secp256k1": "^2.2.4",
+    "tronweb": "^5.3.2",
+    "tweetnacl": "^1.0.3",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
+  },
+  "overrides": {
+    "rpc-websockets": {
+      "uuid": "8.3.2"
+    }
+  },
+  "devDependencies": {
+    "@types/bs58": "^4.0.4",
+    "@types/node": "^20.14.10",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.15.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.3"
+  }
+}

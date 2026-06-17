@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Live Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 48px 24px; }
+
+    h1 { font-size: 22px; font-weight: 700; color: #63b3ed; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #718096; margin-bottom: 32px; }
+
+    .controls { width: 100%; max-width: 560px; margin-bottom: 32px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #718096; margin-bottom: 5px; }
+    .field input { width: 100%; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 10px 16px; color: #e2e8f0; font-size: 14px; outline: none; }
+    .field input:focus { border-color: #63b3ed; }
+    .track-btn { width: 100%; background: #3182ce; color: white; border: none; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; letter-spacing: 0.3px; }
+    .track-btn:hover { background: #2b6cb0; }
+
+    /* ── Payment header ──────────────────────────────────────────────────── */
+    #payment-header { display: none; width: 100%; max-width: 640px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 16px 20px; margin-bottom: 32px; }
+    .pmt-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+    .pmt-field { font-size: 12px; color: #718096; }
+    .pmt-field strong { display: block; font-size: 14px; color: #e2e8f0; margin-top: 2px; }
+    .pulse-dot { width: 8px; height: 8px; background: #68d391; border-radius: 50%; animation: glow 1.5s infinite; margin-left: auto; }
+    .pulse-dot.idle { background: #4a5568; animation: none; }
+    @keyframes glow { 0%,100%{box-shadow:0 0 4px #68d39166} 50%{box-shadow:0 0 12px #68d391cc} }
+
+    /* ── Timeline ────────────────────────────────────────────────────────── */
+    .timeline { width: 100%; max-width: 640px; }
+
+    .step { display: flex; gap: 20px; }
+    .step-left { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; }
+    .dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #2d3748; background: #1a1f2e; flex-shrink: 0; transition: all 0.3s; }
+    .dot.done   { background: #68d391; border-color: #68d391; box-shadow: 0 0 10px #68d39155; }
+    .dot.active { background: #63b3ed; border-color: #63b3ed; animation: blink 1.3s infinite; }
+    .dot.failed { background: #fc8181; border-color: #fc8181; }
+    @keyframes blink { 0%,100%{box-shadow:0 0 6px #63b3ed55} 50%{box-shadow:0 0 18px #63b3edaa} }
+    .line { flex: 1; width: 2px; background: #2d3748; min-height: 36px; margin: 3px 0; transition: background 0.3s; }
+    .line.done { background: #68d391; }
+
+    .step-body { flex: 1; padding-bottom: 28px; }
+    .step-name { font-size: 15px; font-weight: 700; color: #4a5568; margin-bottom: 3px; transition: color 0.3s; letter-spacing: 0.5px; }
+    .step-name.done   { color: #68d391; }
+    .step-name.active { color: #63b3ed; }
+    .step-name.failed { color: #fc8181; }
+    .step-hint { font-size: 12px; color: #4a5568; line-height: 1.5; transition: color 0.3s; }
+    .step-hint.show { color: #718096; }
+
+    .detail-box { margin-top: 10px; background: #111520; border: 1px solid #2d3748; border-radius: 8px; padding: 12px 16px; font-size: 12px; }
+    .d-row { display: flex; gap: 8px; margin-bottom: 5px; align-items: baseline; }
+    .d-row:last-child { margin-bottom: 0; }
+    .d-lbl { color: #718096; width: 88px; flex-shrink: 0; }
+    .d-val { color: #e2e8f0; word-break: break-all; }
+    .d-val a { color: #63b3ed; text-decoration: none; }
+    .d-val.green { color: #68d391; font-weight: 600; }
+
+    .badge-net { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .net-ETH    { background: #1a2a4a; color: #7fa8d4; }
+    .net-BSC    { background: #3a2a1a; color: #f0b90b; }
+    .net-TRON   { background: #2a1a3a; color: #cc0000; }
+    .net-SOLANA { background: #1a3a3a; color: #9945FF; }
+
+    #msg { font-size: 14px; color: #4a5568; text-align: center; margin-top: 40px; }
+    #errmsg { font-size: 13px; color: #fc8181; text-align: center; margin-top: 12px; display: none; }
+  </style>
+</head>
+<body>
+
+<h1>Payment Live Tracker</h1>
+<p class="subtitle">Статус платежа обновляется каждые 3 секунды</p>
+
+<div class="controls">
+  <div class="field">
+    <label>Admin Secret</label>
+    <input type="password" id="inp-secret" placeholder="Значение ADMIN_SECRET из .env" />
+  </div>
+  <div class="field">
+    <label>User ID</label>
+    <input type="text" id="inp-uid" placeholder="Например: test_user_1" />
+  </div>
+  <button class="track-btn" onclick="startTracking()">Начать отслеживание</button>
+</div>
+
+<div id="payment-header">
+  <div class="pmt-row">
+    <div class="pmt-field">User ID <strong id="h-uid">—</strong></div>
+    <div class="pmt-field">Сеть <strong id="h-net">—</strong></div>
+    <div class="pmt-field">Токен <strong id="h-token">—</strong></div>
+    <div class="pmt-field">Получено <strong id="h-amount" style="color:#68d391">—</strong></div>
+    <div class="pulse-dot" id="pulse"></div>
+  </div>
+</div>
+
+<div class="timeline" id="timeline"></div>
+<div id="msg">Введите User ID и Admin Secret, нажмите «Начать отслеживание»</div>
+<div id="errmsg"></div>
+
+<script>
+  const STEPS = [
+    { status: 'DETECTED',  name: 'DETECTED',  hint: 'Входящая транзакция обнаружена в блокчейне. Ожидаем подтверждений.' },
+    { status: 'CONFIRMED', name: 'CONFIRMED', hint: 'Набрано необходимое количество блоков-подтверждений.' },
+    { status: 'SWEEPING',  name: 'SWEEPING',  hint: 'Средства переводятся с депозитного адреса на мастер-кошелёк.' },
+    { status: 'COMPLETED', name: 'COMPLETED', hint: 'Sweep завершён. Вебхук-уведомление отправлено оператору.' },
+  ];
+  const ORDER = STEPS.map(s => s.status);
+
+  const EXPLORERS = {
+    ETH:    h => `https://sepolia.etherscan.io/tx/${h}`,
+    BSC:    h => `https://bscscan.com/tx/${h}`,
+    TRON:   h => `https://tronscan.org/#/transaction/${h}`,
+    SOLANA: h => `https://solscan.io/tx/${h}`,
+  };
+  const DECIMALS = { ETH: 18, BNB: 18, TRX: 6, SOL: 9, USDT: 6, USDC: 6 };
+
+  function fmtAmt(raw, token) {
+    if (!raw || parseFloat(raw) === 0) return '0 ' + (token ?? '');
+    const val = parseFloat(raw) / Math.pow(10, DECIMALS[token] ?? 18);
+    return (val < 0.000001 ? val.toExponential(4) : val.toFixed(8).replace(/\.?0+$/, '')) + ' ' + (token ?? '');
+  }
+  function fmtDate(d) { return d ? new Date(d).toLocaleString('ru') : '—'; }
+
+  let timer = null;
+  let ADMIN_SECRET = '';
+  let UID = '';
+
+  function startTracking() {
+    ADMIN_SECRET = document.getElementById('inp-secret').value.trim();
+    UID = document.getElementById('inp-uid').value.trim();
+    if (!ADMIN_SECRET) { showErr('Введите Admin Secret'); return; }
+    if (!UID)          { showErr('Введите User ID'); return; }
+    document.getElementById('errmsg').style.display = 'none';
+    document.getElementById('msg').style.display = 'none';
+    document.getElementById('payment-header').style.display = 'block';
+    document.getElementById('h-uid').textContent = UID;
+    if (timer) clearInterval(timer);
+    poll();
+    timer = setInterval(poll, 3000);
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch(
+        `/api/v1/admin/payments?userId=${encodeURIComponent(UID)}&limit=1`,
+        { headers: { 'x-admin-secret': ADMIN_SECRET } }
+      );
+      if (r.status === 403) { showErr('Неверный Admin Secret'); clearInterval(timer); return; }
+      const { data } = await r.json();
+      if (!data?.length) {
+        document.getElementById('timeline').innerHTML = '';
+        document.getElementById('msg').textContent = 'Платежей для "' + UID + '" не найдено. Отправьте средства на депозитный адрес.';
+        document.getElementById('msg').style.display = 'block';
+        return;
+      }
+      document.getElementById('msg').style.display = 'none';
+      renderPayment(data[0]);
+    } catch (e) {
+      showErr('Ошибка: ' + e.message);
+    }
+  }
+
+  function renderPayment(p) {
+    document.getElementById('h-net').innerHTML = `<span class="badge-net net-${p.network}">${p.network}</span>`;
+    document.getElementById('h-token').textContent = p.token;
+    document.getElementById('h-amount').textContent = fmtAmt(p.receivedAmount, p.token);
+
+    const curIdx = p.status === 'FAILED' ? 0 : ORDER.indexOf(p.status);
+    const isDone = p.status === 'COMPLETED' || p.status === 'FAILED';
+    document.getElementById('pulse').className = 'pulse-dot' + (isDone ? ' idle' : '');
+    if (isDone) clearInterval(timer);
+
+    let html = '';
+    STEPS.forEach((step, i) => {
+      const pastDone = p.status === 'COMPLETED' || i < curIdx;
+      const isActive = i === curIdx && p.status !== 'COMPLETED';
+      const isFailed = p.status === 'FAILED' && i === curIdx;
+      const cls = isFailed ? 'failed' : pastDone ? 'done' : isActive ? 'active' : '';
+
+      let detail = '';
+      if (step.status === 'DETECTED' && cls && p.txHash) {
+        const url = EXPLORERS[p.network]?.(p.txHash);
+        detail = `<div class="detail-box">
+          <div class="d-row"><span class="d-lbl">Tx Hash</span><span class="d-val"><a href="${url}" target="_blank">${p.txHash.slice(0,22)}…</a></span></div>
+          <div class="d-row"><span class="d-lbl">Сумма</span><span class="d-val green">${fmtAmt(p.receivedAmount, p.token)}</span></div>
+          <div class="d-row"><span class="d-lbl">Комиссия</span><span class="d-val">${fmtAmt(p.feeAmount, p.token)}</span></div>
+          <div class="d-row"><span class="d-lbl">Адрес</span><span class="d-val">${p.address ?? '—'}</span></div>
+        </div>`;
+      }
+      if (step.status === 'COMPLETED' && (pastDone) && p.sweepTxHash) {
+        const url = EXPLORERS[p.network]?.(p.sweepTxHash);
+        detail = `<div class="detail-box">
+          <div class="d-row"><span class="d-lbl">Sweep Tx</span><span class="d-val"><a href="${url}" target="_blank">${p.sweepTxHash.slice(0,22)}…</a></span></div>
+          <div class="d-row"><span class="d-lbl">Завершён</span><span class="d-val">${fmtDate(p.completedAt)}</span></div>
+        </div>`;
+      }
+
+      const isLast = i === STEPS.length - 1;
+      html += `<div class="step">
+        <div class="step-left">
+          <div class="dot ${cls}"></div>
+          ${!isLast ? `<div class="line ${pastDone ? 'done' : ''}"></div>` : ''}
+        </div>
+        <div class="step-body">
+          <div class="step-name ${cls}">${step.name}</div>
+          <div class="step-hint ${cls ? 'show' : ''}">${step.hint}</div>
+          ${detail}
+        </div>
+      </div>`;
+    });
+    document.getElementById('timeline').innerHTML = html;
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById('errmsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  document.getElementById('inp-uid').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startTracking();
+  });
+
+  // URL params: ?secret=...&userId=...
+  const params = new URLSearchParams(location.search);
+  if (params.get('secret')) document.getElementById('inp-secret').value = params.get('secret');
+  if (params.get('userId')) {
+    document.getElementById('inp-uid').value = params.get('userId');
+    if (params.get('secret')) startTracking();
+  }
+</script>
+</body>
+</html>

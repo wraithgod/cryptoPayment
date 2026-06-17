@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Network {
+  ETH
+  BSC
+  TRON
+  SOLANA
+}
+
+enum Token {
+  ETH
+  BNB
+  TRX
+  SOL
+  USDT
+  USDC
+}
+
+enum PaymentStatus {
+  DETECTED      // Deposit seen on-chain, waiting confirmations
+  CONFIRMED     // Required confirmations reached
+  SWEEPING      // Moving funds to master wallet
+  COMPLETED     // Funds swept, operator notified
+  FAILED        // Something went wrong
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum WebhookEventType {
+  PAYMENT_DETECTED
+  PAYMENT_CONFIRMED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  WITHDRAWAL_COMPLETED
+  WITHDRAWAL_FAILED
+}
+
+// Operator configuration — singleton row (id = 1)
+model Settings {
+  id            Int      @id @default(1)
+  feePercent    Decimal  @default(1.0) @map("fee_percent") @db.Decimal(5, 2)
+  webhookUrl    String?  @map("webhook_url")
+  webhookSecret String?  @map("webhook_secret")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model UserWallet {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  network      Network
+  address      String
+  hdIndex      Int      @map("hd_index")
+  encryptedKey String   @map("encrypted_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  payments Payment[]
+
+  @@unique([userId, network])
+  @@unique([network, address])
+  @@map("user_wallets")
+}
+
+model UserWalletCounter {
+  network Network @id
+  count   Int     @default(0)
+
+  @@map("user_wallet_counters")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  userWalletId   String        @map("user_wallet_id")
+  network        Network
+  token          Token
+  receivedAmount Decimal       @default(0) @map("received_amount") @db.Decimal(36, 18)
+  feeAmount      Decimal       @default(0) @map("fee_amount") @db.Decimal(36, 18)
+  feePercent     Decimal       @map("fee_percent") @db.Decimal(5, 2)
+  status         PaymentStatus @default(DETECTED)
+  txHash         String        @map("tx_hash")
+  sweepTxHash    String?       @map("sweep_tx_hash")
+  confirmations  Int           @default(0)
+  completedAt    DateTime?     @map("completed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  userWallet    UserWallet    @relation(fields: [userWalletId], references: [id])
+  webhookEvents WebhookEvent[]
+
+  @@unique([txHash])
+  @@index([userId])
+  @@index([status])
+  @@index([network, status])
+  @@index([userWalletId])
+  @@map("payments")
+}
+
+model Withdrawal {
+  id              String           @id @default(uuid())
+  network         Network
+  token           Token
+  amount          Decimal          @db.Decimal(36, 18)
+  feeAmount       Decimal          @default(0) @map("fee_amount") @db.Decimal(36, 18)
+  toAddress       String           @map("to_address")
+  txHash          String?          @map("tx_hash")
+  status          WithdrawalStatus @default(PENDING)
+  failReason      String?          @map("fail_reason")
+  clientReference String?          @map("client_reference")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  webhookEvents WebhookEvent[]
+
+  @@index([status])
+  @@map("withdrawals")
+}
+
+model WebhookEvent {
+  id           String           @id @default(uuid())
+  paymentId    String?          @map("payment_id")
+  withdrawalId String?          @map("withdrawal_id")
+  eventType    WebhookEventType @map("event_type")
+  payload      Json
+  attempts     Int              @default(0)
+  maxAttempts  Int              @default(5) @map("max_attempts")
+  replayCount  Int              @default(0) @map("replay_count")
+  nextRetryAt  DateTime?        @map("next_retry_at")
+  deliveredAt  DateTime?        @map("delivered_at")
+  lastError    String?          @map("last_error")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  payment    Payment?    @relation(fields: [paymentId], references: [id])
+  withdrawal Withdrawal? @relation(fields: [withdrawalId], references: [id])
+
+  @@index([deliveredAt, nextRetryAt])
+  @@map("webhook_events")
+}

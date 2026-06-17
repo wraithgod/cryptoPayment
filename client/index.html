@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoGateway — Client Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    /* Auth */
+    #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    #auth-box { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 16px; padding: 48px; width: 420px; text-align: center; }
+    #auth-box .logo { font-size: 28px; font-weight: 800; color: #63b3ed; margin-bottom: 6px; }
+    #auth-box .sub { color: #718096; font-size: 14px; margin-bottom: 28px; }
+    #auth-box input { width: 100%; background: #2d3748; border: 1px solid #4a5568; border-radius: 8px; padding: 11px 14px; color: #e2e8f0; font-size: 14px; outline: none; margin-bottom: 12px; font-family: 'Courier New', monospace; }
+    #auth-box input:focus { border-color: #63b3ed; }
+    #auth-box button { width: 100%; background: #3182ce; color: white; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    #auth-box button:hover { background: #2b6cb0; }
+    #auth-error { color: #fc8181; font-size: 13px; margin-top: 10px; display: none; }
+
+    /* App */
+    #main-app { display: none; }
+    nav { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    .nav-left { display: flex; align-items: center; gap: 16px; }
+    .nav-logo { font-size: 16px; font-weight: 700; color: #63b3ed; }
+    .nav-client { font-size: 14px; color: #e2e8f0; font-weight: 600; }
+    .nav-right { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #718096; }
+    .fee-badge { background: #1a3a2a; color: #68d391; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 18px; }
+    .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 8px; }
+    .stat-card .value { font-size: 26px; font-weight: 700; }
+    .stat-card .hint { font-size: 12px; color: #718096; margin-top: 4px; }
+    .green { color: #68d391; } .blue { color: #63b3ed; } .yellow { color: #f6e05e; } .red { color: #fc8181; } .gray { color: #a0aec0; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; background: #1a1f2e; border-radius: 8px; padding: 4px; margin-bottom: 20px; border: 1px solid #2d3748; width: fit-content; }
+    .tab { padding: 8px 22px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; background: transparent; color: #718096; }
+    .tab.active { background: #2d3748; color: #e2e8f0; }
+
+    /* Table */
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; overflow: hidden; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #2d3748; }
+    .card-header h2 { font-size: 15px; font-weight: 600; }
+    .refresh-btn { background: #2d3748; border: none; color: #a0aec0; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+    .refresh-btn:hover { color: #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #718096; border-bottom: 1px solid #2d3748; white-space: nowrap; }
+    td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid #161b27; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1e2433; }
+    .empty { text-align: center; padding: 40px; color: #718096; font-size: 14px; }
+    .loader-row { text-align: center; padding: 32px; color: #4a5568; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 100px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .b-pending { background: #3a3a1a; color: #f6e05e; } .b-pending::before { background: #f6e05e; }
+    .b-detected { background: #1a2a3a; color: #63b3ed; } .b-detected::before { background: #63b3ed; animation: pulse 1.5s infinite; }
+    .b-confirmed { background: #1a2a4a; color: #90cdf4; } .b-confirmed::before { background: #90cdf4; }
+    .b-sweeping { background: #2a1a3a; color: #b794f4; } .b-sweeping::before { background: #b794f4; animation: pulse 1.5s infinite; }
+    .b-completed { background: #1a3a2a; color: #68d391; } .b-completed::before { background: #68d391; }
+    .b-expired { background: #2d3748; color: #718096; } .b-expired::before { background: #718096; }
+    .b-failed { background: #3a1a1a; color: #fc8181; } .b-failed::before { background: #fc8181; }
+    .b-processing { background: #1a2a3a; color: #63b3ed; } .b-processing::before { background: #63b3ed; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Network pill */
+    .net { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .net-ETH { background: #1a2a4a; color: #7fa8d4; }
+    .net-BSC { background: #3a2a1a; color: #f0b90b; }
+    .net-TRON { background: #2a1a1a; color: #ff4444; }
+    .net-SOLANA { background: #1a3a3a; color: #9945FF; }
+
+    code { font-family: 'Courier New', monospace; font-size: 12px; background: #2d3748; padding: 2px 6px; border-radius: 4px; color: #63b3ed; }
+    .mono { font-family: 'Courier New', monospace; font-size: 12px; }
+
+    /* Address + copy */
+    .addr-cell { display: flex; align-items: center; gap: 6px; }
+    .copy-btn { background: none; border: none; cursor: pointer; color: #718096; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
+    .copy-btn:hover { color: #e2e8f0; background: #2d3748; }
+
+    /* Pagination */
+    .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; font-size: 13px; color: #718096; border-top: 1px solid #2d3748; }
+    .pagination button { background: #2d3748; border: none; color: #e2e8f0; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .pagination button:disabled { opacity: 0.35; cursor: default; }
+
+    /* Detail modal */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+    .modal.open { display: flex; }
+    .modal-box { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+    .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #2d3748; font-size: 13px; gap: 12px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: #718096; white-space: nowrap; flex-shrink: 0; }
+    .detail-value { text-align: right; word-break: break-all; }
+    .modal-close { margin-top: 20px; width: 100%; background: #2d3748; border: none; color: #e2e8f0; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .modal-close:hover { background: #4a5568; }
+
+    /* Auto-refresh indicator */
+    .refresh-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #718096; }
+    .refresh-dot { width: 7px; height: 7px; border-radius: 50%; background: #68d391; animation: pulse 2s infinite; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 8px; align-items: center; }
+    select { background: #2d3748; border: 1px solid #4a5568; border-radius: 7px; padding: 6px 10px; color: #e2e8f0; font-size: 13px; outline: none; }
+    select:focus { border-color: #63b3ed; }
+    .search-box { background: #2d3748; border: 1px solid #4a5568; border-radius: 7px; padding: 6px 12px; color: #e2e8f0; font-size: 13px; outline: none; width: 200px; }
+    .search-box:focus { border-color: #63b3ed; }
+  </style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="auth-screen">
+  <div id="auth-box">
+    <div class="logo">CryptoGateway</div>
+    <div class="sub">Client Portal — enter your API key to continue</div>
+    <input type="password" id="api-key-input" placeholder="cpg_your_api_key_here" autocomplete="off" />
+    <button onclick="login()">Sign In</button>
+    <div id="auth-error">Invalid API key</div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="main-app">
+  <nav>
+    <div class="nav-left">
+      <div class="nav-logo">CryptoGateway</div>
+      <div style="color:#4a5568">|</div>
+      <div class="nav-client" id="nav-name">—</div>
+    </div>
+    <div class="nav-right">
+      <span>Fee: <span id="nav-fee" class="fee-badge">—%</span></span>
+      <div class="refresh-indicator"><div class="refresh-dot"></div><span>Live</span></div>
+      <span id="nav-time" style="min-width:80px;text-align:right"></span>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="label">Completed Payments</div><div class="value green" id="s-completed">—</div><div class="hint">successfully processed</div></div>
+      <div class="stat-card"><div class="label">Pending / Active</div><div class="value yellow" id="s-pending">—</div><div class="hint">waiting for deposit</div></div>
+      <div class="stat-card"><div class="label">Total Volume Received</div><div class="value blue" id="s-volume">—</div><div class="hint">after our fee</div></div>
+      <div class="stat-card"><div class="label">Withdrawals Done</div><div class="value gray" id="s-withdrawals">—</div><div class="hint">completed payouts</div></div>
+      <div class="stat-card"><div class="label">Failed Payments</div><div class="value red" id="s-failed">—</div><div class="hint">expired or error</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('payments')">Payments</button>
+      <button class="tab" onclick="switchTab('withdrawals')">Withdrawals</button>
+    </div>
+
+    <!-- Payments Tab -->
+    <div id="tab-payments">
+      <div class="card">
+        <div class="card-header">
+          <h2>Payment Transactions</h2>
+          <div class="filter-bar">
+            <select id="p-status-filter" onchange="pPage=1;loadPayments()">
+              <option value="">All statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="DETECTED">Detected</option>
+              <option value="CONFIRMED">Confirmed</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="FAILED">Failed</option>
+            </select>
+            <select id="p-net-filter" onchange="pPage=1;loadPayments()">
+              <option value="">All networks</option>
+              <option>ETH</option><option>BSC</option><option>TRON</option><option>SOLANA</option>
+            </select>
+            <button class="refresh-btn" onclick="loadPayments()">↻ Refresh</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Network</th>
+              <th>Token</th>
+              <th>Expected</th>
+              <th>Received</th>
+              <th>Status</th>
+              <th>Deposit Address</th>
+              <th>Reference</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="payments-tbody"><tr><td colspan="10" class="loader-row">Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="payments-pag"></div>
+      </div>
+    </div>
+
+    <!-- Withdrawals Tab -->
+    <div id="tab-withdrawals" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <h2>Withdrawal Transactions</h2>
+          <button class="refresh-btn" onclick="loadWithdrawals()">↻ Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Network</th>
+              <th>Token</th>
+              <th>Amount</th>
+              <th>To Address</th>
+              <th>Status</th>
+              <th>TX Hash</th>
+              <th>Reference</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="withdrawals-tbody"><tr><td colspan="10" class="loader-row">Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="withdrawals-pag"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Detail Modal -->
+<div class="modal" id="payment-modal">
+  <div class="modal-box">
+    <h3>Payment Details <span id="pm-status-badge"></span></h3>
+    <div id="pm-rows"></div>
+    <button class="modal-close" onclick="closeModal('payment-modal')">Close</button>
+  </div>
+</div>
+
+<!-- Withdrawal Detail Modal -->
+<div class="modal" id="withdrawal-modal">
+  <div class="modal-box">
+    <h3>Withdrawal Details <span id="wm-status-badge"></span></h3>
+    <div id="wm-rows"></div>
+    <button class="modal-close" onclick="closeModal('withdrawal-modal')">Close</button>
+  </div>
+</div>
+
+<script>
+  let API_KEY = '';
+  let pPage = 1, wPage = 1;
+  let autoRefreshTimer = null;
+  const loaders = { payments: null, withdrawals: null };
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+  async function login() {
+    API_KEY = document.getElementById('api-key-input').value.trim();
+    try {
+      const res = await apiFetch('/me');
+      if (!res.ok) throw new Error();
+      const { data } = await res.json();
+      document.getElementById('nav-name').textContent = data.name;
+      document.getElementById('nav-fee').textContent = data.feePercent + '%';
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('main-app').style.display = 'block';
+      startClock();
+      loadAll();
+      startAutoRefresh();
+    } catch {
+      document.getElementById('auth-error').style.display = 'block';
+    }
+  }
+
+  function apiFetch(path, opts) {
+    return fetch('/api/v1' + path, {
+      ...opts,
+      headers: { 'X-Api-Key': API_KEY, 'Content-Type': 'application/json', ...(opts?.headers || {}) },
+    });
+  }
+
+  async function api(path, opts) {
+    const r = await apiFetch(path, opts || {});
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  // ── Clock & auto-refresh ──────────────────────────────────────────────────
+  function startClock() {
+    const el = document.getElementById('nav-time');
+    setInterval(() => { el.textContent = new Date().toLocaleTimeString(); }, 1000);
+  }
+
+  function startAutoRefresh() {
+    autoRefreshTimer = setInterval(() => {
+      loadStats();
+      if (document.getElementById('tab-payments').style.display !== 'none') loadPayments();
+      else loadWithdrawals();
+    }, 15000);
+  }
+
+  // ── Tab switch ─────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('tab-payments').style.display = tab === 'payments' ? '' : 'none';
+    document.getElementById('tab-withdrawals').style.display = tab === 'withdrawals' ? '' : 'none';
+    document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', (i === 0) === (tab === 'payments')));
+    if (tab === 'payments') loadPayments();
+    else loadWithdrawals();
+  }
+
+  function loadAll() { loadStats(); loadPayments(); }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const { data } = await api('/stats');
+      const p = data.payments;
+      document.getElementById('s-completed').textContent = p.COMPLETED ?? 0;
+      document.getElementById('s-pending').textContent = (p.PENDING ?? 0) + (p.DETECTED ?? 0) + (p.CONFIRMED ?? 0) + (p.SWEEPING ?? 0);
+      document.getElementById('s-failed').textContent = (p.FAILED ?? 0) + (p.EXPIRED ?? 0);
+      document.getElementById('s-withdrawals').textContent = data.withdrawals.COMPLETED ?? 0;
+      const vol = parseFloat(data.volume.totalReceived);
+      document.getElementById('s-volume').textContent = vol ? fmtAmt(vol.toString()) : '0';
+    } catch {}
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────────
+  async function loadPayments() {
+    const status = document.getElementById('p-status-filter').value;
+    const net = document.getElementById('p-net-filter').value;
+    const params = new URLSearchParams({ page: pPage, limit: 15 });
+    if (status) params.set('status', status);
+    try {
+      const { data, pagination } = await api('/payments?' + params);
+      const tbody = document.getElementById('payments-tbody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty">No payments found</td></tr>';
+        document.getElementById('payments-pag').innerHTML = '';
+        return;
+      }
+      const filtered = net ? data.filter(p => p.network === net) : data;
+      tbody.innerHTML = filtered.map(p => {
+        const addr = p.address || '';
+        const short = addr.length > 16 ? addr.slice(0, 8) + '…' + addr.slice(-6) : addr;
+        return '<tr>' +
+          '<td><code>' + p.id.slice(0,8) + '…</code></td>' +
+          '<td><span class="net net-' + p.network + '">' + p.network + '</span></td>' +
+          '<td><strong>' + p.token + '</strong></td>' +
+          '<td class="mono">' + fmtAmt(p.expectedAmount) + '</td>' +
+          '<td class="mono ' + (parseFloat(p.receivedAmount) > 0 ? 'green' : 'gray') + '">' + fmtAmt(p.receivedAmount) + '</td>' +
+          '<td>' + statusBadge(p.status) + '</td>' +
+          '<td><div class="addr-cell"><span class="mono" title="' + addr + '">' + short + '</span><button class="copy-btn" onclick="copy(\'' + addr + '\')" title="Copy address">⧉</button></div></td>' +
+          '<td><span style="color:#a0aec0;font-size:12px">' + (p.clientReference || '—') + '</span></td>' +
+          '<td style="color:#718096;font-size:12px;white-space:nowrap">' + fmtDate(p.createdAt) + '</td>' +
+          '<td><button class="copy-btn" style="padding:4px 8px;color:#63b3ed" onclick="openPayment(' + JSON.stringify(JSON.stringify(p)) + ')">Details</button></td>' +
+          '</tr>';
+      }).join('');
+      renderPag('payments', pagination, loadPayments, 'payments-pag', () => { pPage += 1; }, () => { pPage -= 1; });
+    } catch(e) {
+      document.getElementById('payments-tbody').innerHTML = '<tr><td colspan="10" class="empty">Error loading data</td></tr>';
+    }
+  }
+
+  // ── Withdrawals ───────────────────────────────────────────────────────────
+  async function loadWithdrawals() {
+    try {
+      const { data, pagination } = await api('/withdrawals?page=' + wPage + '&limit=15');
+      const tbody = document.getElementById('withdrawals-tbody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty">No withdrawals found</td></tr>';
+        document.getElementById('withdrawals-pag').innerHTML = '';
+        return;
+      }
+      tbody.innerHTML = data.map(w => {
+        const addr = w.toAddress || '';
+        const short = addr.length > 16 ? addr.slice(0, 8) + '…' + addr.slice(-6) : addr;
+        const txShort = w.txHash ? w.txHash.slice(0, 10) + '…' : '—';
+        return '<tr>' +
+          '<td><code>' + w.id.slice(0,8) + '…</code></td>' +
+          '<td><span class="net net-' + w.network + '">' + w.network + '</span></td>' +
+          '<td><strong>' + w.token + '</strong></td>' +
+          '<td class="mono">' + fmtAmt(w.amount) + '</td>' +
+          '<td><div class="addr-cell"><span class="mono" title="' + addr + '">' + short + '</span><button class="copy-btn" onclick="copy(\'' + addr + '\')" title="Copy">⧉</button></div></td>' +
+          '<td>' + wStatusBadge(w.status) + '</td>' +
+          '<td>' + (w.txHash ? '<div class="addr-cell"><span class="mono" title="' + w.txHash + '">' + txShort + '</span><button class="copy-btn" onclick="copy(\'' + w.txHash + '\')">⧉</button></div>' : '<span style="color:#4a5568">—</span>') + '</td>' +
+          '<td><span style="color:#a0aec0;font-size:12px">' + (w.clientReference || '—') + '</span></td>' +
+          '<td style="color:#718096;font-size:12px;white-space:nowrap">' + fmtDate(w.createdAt) + '</td>' +
+          '<td><button class="copy-btn" style="padding:4px 8px;color:#63b3ed" onclick="openWithdrawal(' + JSON.stringify(JSON.stringify(w)) + ')">Details</button></td>' +
+          '</tr>';
+      }).join('');
+      renderPag('withdrawals', pagination, loadWithdrawals, 'withdrawals-pag', () => { wPage += 1; }, () => { wPage -= 1; });
+    } catch {
+      document.getElementById('withdrawals-tbody').innerHTML = '<tr><td colspan="10" class="empty">Error loading data</td></tr>';
+    }
+  }
+
+  // ── Modals ────────────────────────────────────────────────────────────────
+  function openPayment(jsonStr) {
+    const p = JSON.parse(jsonStr);
+    document.getElementById('pm-status-badge').innerHTML = statusBadge(p.status);
+    const rows = [
+      ['Payment ID', '<code>' + p.id + '</code>'],
+      ['Network', '<span class="net net-' + p.network + '">' + p.network + '</span>'],
+      ['Token', '<strong>' + p.token + '</strong>'],
+      ['Expected Amount', '<span class="mono green">' + fmtAmt(p.expectedAmount) + ' ' + p.token + '</span>'],
+      ['Received Amount', '<span class="mono">' + fmtAmt(p.receivedAmount) + ' ' + p.token + '</span>'],
+      ['Fee Amount', '<span class="mono red">' + fmtAmt(p.feeAmount || '0') + ' ' + p.token + '</span>'],
+      ['Deposit Address', '<div class="addr-cell"><code>' + p.address + '</code><button class="copy-btn" onclick="copy(\'' + p.address + '\')">⧉</button></div>'],
+      ['TX Hash', p.txHash ? '<div class="addr-cell"><code>' + p.txHash + '</code><button class="copy-btn" onclick="copy(\'' + p.txHash + '\')">⧉</button></div>' : '<span style="color:#4a5568">Not yet</span>'],
+      ['Status', statusBadge(p.status)],
+      ['Expires At', '<span style="color:#718096">' + fmtDate(p.expiresAt) + '</span>'],
+      ['Completed At', p.completedAt ? '<span class="green">' + fmtDate(p.completedAt) + '</span>' : '<span style="color:#4a5568">—</span>'],
+      ['Your Reference', '<code>' + (p.clientReference || '—') + '</code>'],
+      ['Created At', '<span style="color:#718096">' + fmtDate(p.createdAt) + '</span>'],
+    ];
+    document.getElementById('pm-rows').innerHTML = rows.map(([l, v]) =>
+      '<div class="detail-row"><span class="detail-label">' + l + '</span><span class="detail-value">' + v + '</span></div>'
+    ).join('');
+    document.getElementById('payment-modal').classList.add('open');
+  }
+
+  function openWithdrawal(jsonStr) {
+    const w = JSON.parse(jsonStr);
+    document.getElementById('wm-status-badge').innerHTML = wStatusBadge(w.status);
+    const rows = [
+      ['Withdrawal ID', '<code>' + w.id + '</code>'],
+      ['Network', '<span class="net net-' + w.network + '">' + w.network + '</span>'],
+      ['Token', '<strong>' + w.token + '</strong>'],
+      ['Amount', '<span class="mono">' + fmtAmt(w.amount) + ' ' + w.token + '</span>'],
+      ['To Address', '<div class="addr-cell"><code>' + w.toAddress + '</code><button class="copy-btn" onclick="copy(\'' + w.toAddress + '\')">⧉</button></div>'],
+      ['TX Hash', w.txHash ? '<div class="addr-cell"><code>' + w.txHash + '</code><button class="copy-btn" onclick="copy(\'' + w.txHash + '\')">⧉</button></div>' : '<span style="color:#4a5568">Pending</span>'],
+      ['Status', wStatusBadge(w.status)],
+      ['Your Reference', '<code>' + (w.clientReference || '—') + '</code>'],
+      ['Created At', '<span style="color:#718096">' + fmtDate(w.createdAt) + '</span>'],
+    ];
+    document.getElementById('wm-rows').innerHTML = rows.map(([l, v]) =>
+      '<div class="detail-row"><span class="detail-label">' + l + '</span><span class="detail-value">' + v + '</span></div>'
+    ).join('');
+    document.getElementById('withdrawal-modal').classList.add('open');
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal('payment-modal'); closeModal('withdrawal-modal'); } });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function statusBadge(s) {
+    const cls = { PENDING:'b-pending', DETECTED:'b-detected', CONFIRMED:'b-confirmed', SWEEPING:'b-sweeping', COMPLETED:'b-completed', EXPIRED:'b-expired', FAILED:'b-failed' };
+    return '<span class="badge ' + (cls[s] || 'b-expired') + '">' + s + '</span>';
+  }
+
+  function wStatusBadge(s) {
+    const cls = { PENDING:'b-pending', PROCESSING:'b-processing', COMPLETED:'b-completed', FAILED:'b-failed' };
+    return '<span class="badge ' + (cls[s] || 'b-expired') + '">' + s + '</span>';
+  }
+
+  function fmtAmt(v) {
+    if (!v || v === '0') return '0';
+    const n = parseFloat(v);
+    if (isNaN(n)) return v;
+    return n.toLocaleString('en-US', { maximumFractionDigits: 6 });
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function copy(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const el = document.createElement('div');
+      el.textContent = 'Copied!';
+      el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2d3748;color:#e2e8f0;padding:8px 20px;border-radius:8px;font-size:13px;z-index:999;animation:fadeIn .2s';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1800);
+    });
+  }
+
+  function renderPag(section, pagination, loader, elId, onNext, onPrev) {
+    loaders[section] = loader;
+    const el = document.getElementById(elId);
+    if (!pagination || pagination.pages <= 1) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<span>' + pagination.total + ' total</span>' +
+      '<button ' + (pagination.page <= 1 ? 'disabled' : '') + ' onclick="pagePrev(\'' + section + '\')">← Prev</button>' +
+      '<span>Page ' + pagination.page + ' / ' + pagination.pages + '</span>' +
+      '<button ' + (pagination.page >= pagination.pages ? 'disabled' : '') + ' onclick="pageNext(\'' + section + '\')">Next →</button>';
+  }
+
+  function pageNext(section) {
+    if (section === 'payments') { pPage++; loadPayments(); }
+    else { wPage++; loadWithdrawals(); }
+  }
+  function pagePrev(section) {
+    if (section === 'payments') { pPage = Math.max(1, pPage - 1); loadPayments(); }
+    else { wPage = Math.max(1, wPage - 1); loadWithdrawals(); }
+  }
+</script>
+</body>
+</html>

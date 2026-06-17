@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CryptoPayment Gateway — Документация</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --bg2: #17171e;
+      --bg3: #1e1e28;
+      --border: #2a2a38;
+      --accent: #7c5cfc;
+      --accent2: #5b3fd4;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --orange: #f97316;
+      --text: #e2e2f0;
+      --muted: #888899;
+      --code-bg: #12121a;
+      --sidebar-w: 260px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.6;
+      display: flex;
+    }
+
+    /* ── SIDEBAR ── */
+    nav {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0;
+      overflow-y: auto;
+      padding: 0 0 32px;
+      z-index: 10;
+    }
+
+    .nav-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .nav-logo a { text-decoration: none; }
+    .nav-logo .title { font-size: 15px; font-weight: 700; color: var(--text); display: block; }
+    .nav-logo .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .nav-section { padding: 12px 20px 4px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+    nav a {
+      display: block;
+      padding: 6px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    nav a:hover, nav a.active { color: var(--text); border-left-color: var(--accent); background: rgba(124,92,252,.06); }
+
+    .nav-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge-post { background: #1a3a1a; color: var(--green); }
+    .badge-get  { background: #1a2a4a; color: var(--blue); }
+
+    /* ── MAIN ── */
+    main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      max-width: 900px;
+      padding: 48px 48px 120px;
+    }
+
+    /* ── SECTIONS ── */
+    section { margin-bottom: 72px; }
+
+    h1 { font-size: 32px; font-weight: 800; margin-bottom: 12px; color: #fff; }
+    h2 { font-size: 22px; font-weight: 700; margin: 48px 0 16px; color: #fff; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 16px; font-weight: 600; margin: 28px 0 10px; color: var(--text); }
+    h4 { font-size: 13px; font-weight: 600; margin: 20px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+    p { margin-bottom: 14px; color: #c4c4d4; }
+    p:last-child { margin-bottom: 0; }
+
+    ul, ol { padding-left: 20px; margin-bottom: 14px; color: #c4c4d4; }
+    li { margin-bottom: 5px; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    strong { color: var(--text); font-weight: 600; }
+
+    /* ── CODE ── */
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: .85em;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #c8b4fa;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+      position: relative;
+    }
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color .15s, border-color .15s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    /* Syntax colors */
+    .kw  { color: #c792ea; }   /* keyword */
+    .str { color: #c3e88d; }   /* string */
+    .num { color: #f78c6c; }   /* number */
+    .key { color: #82aaff; }   /* object key */
+    .cmt { color: #546e7a; }   /* comment */
+    .url { color: #89ddff; }   /* url / method */
+    .hdr { color: #ffcb6b; }   /* header */
+
+    /* ── ENDPOINT CARD ── */
+    .endpoint {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 24px 0;
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .method {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: .05em;
+    }
+    .method.post { background: #0f2a0f; color: var(--green); border: 1px solid #22c55e30; }
+    .method.get  { background: #0f1a3a; color: var(--blue);  border: 1px solid #3b82f630; }
+    .endpoint-path { font-family: monospace; font-size: 14px; color: #89ddff; }
+    .endpoint-desc { font-size: 13px; color: var(--muted); margin-left: auto; }
+    .endpoint-body { padding: 20px; }
+
+    /* ── TABLES ── */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; background: var(--bg3); color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: #c4c4d4; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    td code { font-size: 12px; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .badge-detected  { background: #1a2a4a; color: var(--blue); }
+    .badge-confirmed { background: #1a3a1a; color: var(--green); }
+    .badge-sweeping  { background: #2a1a3a; color: #a78bfa; }
+    .badge-completed { background: #1a3a1a; color: #4ade80; }
+    .badge-failed    { background: #3a1a1a; color: var(--red); }
+    .badge-req  { background: #1a1a2a; color: #c8b4fa; }
+    .badge-opt  { background: #1a1a1a; color: var(--muted); }
+
+    /* ── CALLOUT ── */
+    .callout {
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 13px;
+      line-height: 1.6;
+      border-left: 3px solid;
+    }
+    .callout-info   { background: #0f1a2e; border-color: var(--blue);   color: #93c5fd; }
+    .callout-warn   { background: #2a1a0a; border-color: var(--orange); color: #fdba74; }
+    .callout-tip    { background: #0a2a0a; border-color: var(--green);  color: #86efac; }
+
+    /* ── FLOW DIAGRAM ── */
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 24px 0;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .flow-box {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .flow-label {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .flow-arrow {
+      font-size: 18px;
+      color: var(--border);
+      padding: 0 4px;
+      margin-top: -16px;
+    }
+
+    /* ── GRID ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .card-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .card-body  { font-size: 12px; color: var(--muted); }
+    .card-body li { margin-bottom: 3px; }
+
+    /* ── NETWORK CHIPS ── */
+    .chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 2px;
+    }
+    .chip-eth    { background: #1c1c3a; color: #818cf8; }
+    .chip-bsc    { background: #2a2000; color: #facc15; }
+    .chip-tron   { background: #2a0808; color: #f87171; }
+    .chip-sol    { background: #0a1a2a; color: #38bdf8; }
+    .chip-token  { background: #1a2a1a; color: #4ade80; }
+
+    /* ── TOC highlight on scroll ── */
+    @media (max-width: 900px) {
+      nav { display: none; }
+      main { margin-left: 0; padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ SIDEBAR ═══════════════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    <a href="/docs/">
+      <span class="title">⬡ CryptoPayment Gateway</span>
+      <span class="sub">Документация v2.0</span>
+    </a>
+  </div>
+
+  <div class="nav-section">Введение</div>
+  <a href="#overview">Обзор</a>
+  <a href="#quickstart">Быстрый старт</a>
+  <a href="#architecture">Архитектура</a>
+
+  <div class="nav-section">Аутентификация</div>
+  <a href="#auth">API ключи</a>
+
+  <div class="nav-section">Кошельки и депозиты</div>
+  <a href="#deposits">Получение адреса <span class="nav-badge badge-post">POST</span></a>
+  <a href="#deposit-list">Список адресов <span class="nav-badge badge-get">GET</span></a>
+
+  <div class="nav-section">Платежи</div>
+  <a href="#payment-lifecycle">Жизненный цикл</a>
+  <a href="#payment-get">Статус платежа <span class="nav-badge badge-get">GET</span></a>
+  <a href="#payment-list">Список платежей <span class="nav-badge badge-get">GET</span></a>
+
+  <div class="nav-section">Выводы</div>
+  <a href="#withdrawal-create">Создать вывод <span class="nav-badge badge-post">POST</span></a>
+  <a href="#withdrawal-get">Статус вывода <span class="nav-badge badge-get">GET</span></a>
+  <a href="#withdrawal-list">Список выводов <span class="nav-badge badge-get">GET</span></a>
+
+  <div class="nav-section">Аккаунт</div>
+  <a href="#me">Профиль <span class="nav-badge badge-get">GET</span></a>
+  <a href="#stats">Статистика <span class="nav-badge badge-get">GET</span></a>
+
+  <div class="nav-section">События</div>
+  <a href="#webhooks">Вебхуки</a>
+  <a href="#webhook-events">Типы событий</a>
+  <a href="#webhook-security">Безопасность</a>
+
+  <div class="nav-section">Справочник</div>
+  <a href="#networks">Сети и токены</a>
+  <a href="#errors">Коды ошибок</a>
+  <a href="#limits">Лимиты</a>
+
+  <div style="padding: 16px 20px 0; margin-top: 8px; border-top: 1px solid var(--border);">
+    <a href="/api/v1/docs" style="font-size:12px; color: var(--accent);">→ Интерактивный API (Scalar)</a><br>
+    <a href="/admin/" style="font-size:12px; color: var(--muted); margin-top:4px; display:block;">→ Панель администратора</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════ MAIN ═══════════════════════════════════ -->
+<main>
+
+<!-- ═══ OVERVIEW ═══ -->
+<section id="overview">
+  <h1>CryptoPayment Gateway</h1>
+  <p>Кастодиальный шлюз приёма криптовалютных платежей. Ваши пользователи отправляют крипту на персональные адреса — система автоматически обнаруживает поступление, подтверждает и перемещает средства на мастер-кошелёк, уведомляя вас через вебхук на каждом шаге.</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Поддерживаемые сети</div>
+      <div class="card-body">
+        <span class="chip chip-eth">Ethereum</span>
+        <span class="chip chip-bsc">BNB Chain</span>
+        <span class="chip chip-tron">TRON</span>
+        <span class="chip chip-sol">Solana</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Поддерживаемые токены</div>
+      <div class="card-body">
+        <span class="chip chip-eth">ETH</span>
+        <span class="chip chip-bsc">BNB</span>
+        <span class="chip chip-tron">TRX</span>
+        <span class="chip chip-sol">SOL</span>
+        <span class="chip chip-token">USDT</span>
+        <span class="chip chip-token">USDC</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ключевые возможности</div>
+      <div class="card-body">
+        <ul>
+          <li>Постоянные адреса per-пользователь</li>
+          <li>Автодетект входящих переводов</li>
+          <li>Автосвип на мастер-кошелёк</li>
+          <li>Вебхуки с подписью HMAC</li>
+          <li>Управление через REST API</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Архитектурная модель</div>
+      <div class="card-body">
+        <ul>
+          <li>HD-кошельки (BIP44)</li>
+          <li>Зашифрованные приватные ключи</li>
+          <li>Отдельный воркер-процесс</li>
+          <li>Очереди через BullMQ / Redis</li>
+          <li>PostgreSQL для состояния</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ QUICKSTART ═══ -->
+<section id="quickstart">
+  <h2>Быстрый старт</h2>
+
+  <p>Полный сценарий — от получения ключа до первого платежа — в четырёх шагах.</p>
+
+  <h3>1. Получите API ключ</h3>
+  <p>Ключ создаётся в <a href="/admin/">панели администратора</a> или через Admin API. Ключ выглядит как <code>cpg_&lt;64 hex символа&gt;</code>.</p>
+
+  <h3>2. Запросите депозитный адрес для пользователя</h3>
+  <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="url">POST</span> /api/v1/deposits/address
+<span class="hdr">X-Api-Key:</span> cpg_your_key_here
+<span class="hdr">Content-Type:</span> application/json
+
+{
+  <span class="key">"userId"</span>:  <span class="str">"user_42"</span>,
+  <span class="key">"network"</span>: <span class="str">"ETH"</span>,
+  <span class="key">"token"</span>:   <span class="str">"ETH"</span>
+}
+
+<span class="cmt">// Ответ</span>
+{
+  <span class="key">"data"</span>: {
+    <span class="key">"userId"</span>:    <span class="str">"user_42"</span>,
+    <span class="key">"network"</span>:   <span class="str">"ETH"</span>,
+    <span class="key">"token"</span>:     <span class="str">"ETH"</span>,
+    <span class="key">"address"</span>:   <span class="str">"0xABCD...1234"</span>,
+    <span class="key">"createdAt"</span>: <span class="str">"2026-05-15T10:00:00.000Z"</span>
+  }
+}</code></pre>
+
+  <div class="callout callout-tip">Адрес постоянный. Повторный запрос с тем же <code>userId + network + token</code> вернёт тот же адрес — никаких дублей.</div>
+
+  <h3>3. Покажите адрес пользователю</h3>
+  <p>Отобразите QR-код или строку адреса. Пользователь отправляет любую сумму.</p>
+
+  <h3>4. Получите вебхук при зачислении</h3>
+  <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="cmt">// POST на ваш webhookUrl при обнаружении перевода</span>
+{
+  <span class="key">"event"</span>:     <span class="str">"payment.detected"</span>,
+  <span class="key">"paymentId"</span>: <span class="str">"pay_uuid"</span>,
+  <span class="key">"userId"</span>:    <span class="str">"user_42"</span>,
+  <span class="key">"network"</span>:   <span class="str">"ETH"</span>,
+  <span class="key">"token"</span>:     <span class="str">"ETH"</span>,
+  <span class="key">"amount"</span>:    <span class="str">"1000000000000000"</span>,  <span class="cmt">// в базовых единицах (wei)</span>
+  <span class="key">"status"</span>:    <span class="str">"DETECTED"</span>,
+  <span class="key">"txHash"</span>:    <span class="str">"0xdeadbeef..."</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"2026-05-15T10:01:30.000Z"</span>
+}</code></pre>
+</section>
+
+<!-- ═══ ARCHITECTURE ═══ -->
+<section id="architecture">
+  <h2>Архитектура</h2>
+
+  <h3>Модель постоянных кошельков</h3>
+  <p>Каждый ваш пользователь (<code>userId</code>) получает уникальный адрес на каждой сети для каждого токена. Адрес не меняется со временем — пользователь всегда отправляет на один и тот же адрес.</p>
+
+  <pre><code><span class="cmt">userId="user_42" + network=ETH + token=ETH</span>  →  <span class="str">0xABCD...1234</span>
+<span class="cmt">userId="user_42" + network=ETH + token=USDT</span> →  <span class="str">0xEF01...5678</span>  <span class="cmt">(другой адрес)</span>
+<span class="cmt">userId="user_99" + network=ETH + token=ETH</span>  →  <span class="str">0x9876...DCBA</span>  <span class="cmt">(другой пользователь)</span></code></pre>
+
+  <h3>Как работает детект</h3>
+  <p>Воркер-процесс постоянно сканирует чейн для каждой зарегистрированной пары <em>адрес + токен</em>. При обнаружении входящего перевода система автоматически создаёт запись платежа и двигается по жизненному циклу.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-box badge-detected">DETECTED</div>
+      <div class="flow-label">Перевод в блоке</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box badge-confirmed">CONFIRMED</div>
+      <div class="flow-label">N подтверждений</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box badge-sweeping">SWEEPING</div>
+      <div class="flow-label">Перевод на мастер</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-box badge-completed">COMPLETED</div>
+      <div class="flow-label">Вебхук отправлен</div>
+    </div>
+  </div>
+
+  <h3>Деривация кошельков (HD BIP44)</h3>
+  <p>Все адреса выводятся детерминированно из одной мастер-мнемоники. Приватные ключи хранятся в БД в зашифрованном виде (AES-256-GCM). Мнемоника и ключ шифрования передаются только через переменные окружения.</p>
+
+  <table>
+    <tr><th>Сеть</th><th>Путь деривации</th><th>Алгоритм</th></tr>
+    <tr><td>ETH / BSC</td><td><code>m/44'/60'/0'/1/{index}</code></td><td>secp256k1</td></tr>
+    <tr><td>TRON</td><td><code>m/44'/195'/0'/1/{index}</code></td><td>secp256k1 + Base58Check</td></tr>
+    <tr><td>Solana</td><td><code>m/44'/501'/{index}'/1'</code></td><td>ed25519</td></tr>
+  </table>
+
+  <h3>Инфраструктура</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">API процесс</div>
+      <div class="card-body">
+        Fastify HTTP сервер. Принимает запросы, управляет кошельками и платежами, отдаёт статусы.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Worker процесс</div>
+      <div class="card-body">
+        Block watcher (сканер чейнов), Sweep worker (перевод на мастер), Webhook worker (доставка событий).
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ AUTH ═══ -->
+<section id="auth">
+  <h2>Аутентификация</h2>
+
+  <p>Все клиентские эндпоинты требуют API ключ в заголовке <code>X-Api-Key</code>. Административные эндпоинты — заголовок <code>X-Admin-Secret</code>.</p>
+
+  <pre><code><span class="cmt"># Клиентские запросы</span>
+<span class="hdr">X-Api-Key:</span> cpg_ae487d5e9816c9566ed4f7a0...
+
+<span class="cmt"># Административные запросы</span>
+<span class="hdr">X-Admin-Secret:</span> your_admin_secret</code></pre>
+
+  <div class="callout callout-warn">Никогда не передавайте API ключ на фронтенд. Все запросы к Gateway должны идти с вашего сервера (backend-to-backend).</div>
+
+  <table>
+    <tr><th>Заголовок</th><th>Применяется к</th><th>Описание</th></tr>
+    <tr><td><code>X-Api-Key</code></td><td>Клиентские роуты</td><td>Идентифицирует клиента (мерчанта)</td></tr>
+    <tr><td><code>X-Admin-Secret</code></td><td><code>/admin/*</code></td><td>Доступ к панели управления</td></tr>
+  </table>
+</section>
+
+<!-- ═══ DEPOSITS ═══ -->
+<section id="deposits">
+  <h2>Получение депозитного адреса</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/api/v1/deposits/address</span>
+      <span class="endpoint-desc">Получить/создать адрес для пользователя</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Тело запроса</h4>
+      <table>
+        <tr><th>Поле</th><th>Тип</th><th>Обязательно</th><th>Описание</th></tr>
+        <tr>
+          <td><code>userId</code></td><td>string</td>
+          <td><span class="badge badge-req">required</span></td>
+          <td>Идентификатор пользователя в вашей системе (число, UUID, email — любая строка до 255 символов)</td>
+        </tr>
+        <tr>
+          <td><code>network</code></td><td>string</td>
+          <td><span class="badge badge-req">required</span></td>
+          <td>Одно из: <code>ETH</code>, <code>BSC</code>, <code>TRON</code>, <code>SOLANA</code></td>
+        </tr>
+        <tr>
+          <td><code>token</code></td><td>string</td>
+          <td><span class="badge badge-req">required</span></td>
+          <td>Одно из: <code>ETH</code>, <code>BNB</code>, <code>TRX</code>, <code>SOL</code>, <code>USDT</code>, <code>USDC</code></td>
+        </tr>
+      </table>
+
+      <h4>Пример запроса</h4>
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="url">POST</span> /api/v1/deposits/address
+<span class="hdr">X-Api-Key:</span> cpg_...
+<span class="hdr">Content-Type:</span> application/json
+
+{
+  <span class="key">"userId"</span>:  <span class="str">"12345"</span>,
+  <span class="key">"network"</span>: <span class="str">"ETH"</span>,
+  <span class="key">"token"</span>:   <span class="str">"USDT"</span>
+}</code></pre>
+
+      <h4>Ответ</h4>
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: {
+    <span class="key">"userId"</span>:    <span class="str">"12345"</span>,
+    <span class="key">"network"</span>:   <span class="str">"ETH"</span>,
+    <span class="key">"token"</span>:     <span class="str">"USDT"</span>,
+    <span class="key">"address"</span>:   <span class="str">"0xc75f2BFb6A4FE3e6C1A80E4f6baA3F86a5dF97cB"</span>,
+    <span class="key">"createdAt"</span>: <span class="str">"2026-05-15T10:00:00.000Z"</span>
+  }
+}</code></pre>
+
+      <div class="callout callout-info">Метод идемпотентен — повторный вызов с теми же параметрами всегда возвращает тот же адрес. Безопасно кешировать на стороне клиента.</div>
+    </div>
+  </div>
+</section>
+
+<section id="deposit-list">
+  <h2>Список депозитных адресов</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/deposits/addresses</span>
+      <span class="endpoint-desc">Все адреса клиента</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Query параметры</h4>
+      <table>
+        <tr><th>Параметр</th><th>Тип</th><th></th><th>Описание</th></tr>
+        <tr><td><code>userId</code></td><td>string</td><td><span class="badge badge-opt">optional</span></td><td>Фильтр по конкретному пользователю</td></tr>
+        <tr><td><code>network</code></td><td>string</td><td><span class="badge badge-opt">optional</span></td><td>Фильтр по сети</td></tr>
+        <tr><td><code>page</code></td><td>number</td><td><span class="badge badge-opt">optional</span></td><td>Страница (default: 1)</td></tr>
+        <tr><td><code>limit</code></td><td>number</td><td><span class="badge badge-opt">optional</span></td><td>Записей на страницу (1–100, default: 20)</td></tr>
+      </table>
+
+      <h4>Ответ</h4>
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"userId"</span>:    <span class="str">"12345"</span>,
+      <span class="key">"network"</span>:   <span class="str">"ETH"</span>,
+      <span class="key">"token"</span>:     <span class="str">"USDT"</span>,
+      <span class="key">"address"</span>:   <span class="str">"0xc75f2BFb..."</span>,
+      <span class="key">"createdAt"</span>: <span class="str">"2026-05-15T10:00:00.000Z"</span>
+    }
+  ],
+  <span class="key">"pagination"</span>: {
+    <span class="key">"page"</span>: <span class="num">1</span>, <span class="key">"limit"</span>: <span class="num">20</span>, <span class="key">"total"</span>: <span class="num">1</span>, <span class="key">"pages"</span>: <span class="num">1</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PAYMENT LIFECYCLE ═══ -->
+<section id="payment-lifecycle">
+  <h2>Жизненный цикл платежа</h2>
+
+  <p>Платёж создаётся автоматически в момент обнаружения входящего перевода на адрес пользователя. Вручную создавать его не нужно.</p>
+
+  <table>
+    <tr><th>Статус</th><th>Описание</th><th>Вебхук</th></tr>
+    <tr>
+      <td><span class="badge badge-detected">DETECTED</span></td>
+      <td>Перевод найден в блоке, ожидаем подтверждения</td>
+      <td><code>payment.detected</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-confirmed">CONFIRMED</span></td>
+      <td>Набрано достаточно подтверждений</td>
+      <td><code>payment.confirmed</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-sweeping">SWEEPING</span></td>
+      <td>Идёт перевод средств на мастер-кошелёк</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-completed">COMPLETED</span></td>
+      <td>Средства получены, комиссия удержана</td>
+      <td><code>payment.completed</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-failed">FAILED</span></td>
+      <td>Ошибка при свипе (нет газа, RPC недоступен)</td>
+      <td><code>payment.failed</code></td>
+    </tr>
+  </table>
+
+  <h3>Количество подтверждений по умолчанию</h3>
+  <table>
+    <tr><th>Сеть</th><th>Подтверждений</th><th>Время ожидания</th></tr>
+    <tr><td><span class="chip chip-eth">ETH</span></td><td>12</td><td>~2.5 мин</td></tr>
+    <tr><td><span class="chip chip-bsc">BSC</span></td><td>15</td><td>~45 сек</td></tr>
+    <tr><td><span class="chip chip-tron">TRON</span></td><td>19</td><td>~1 мин</td></tr>
+    <tr><td><span class="chip chip-sol">Solana</span></td><td>1</td><td>~1 сек</td></tr>
+  </table>
+  <p>Значения задаются через <code>ETH_CONFIRMATIONS</code>, <code>BSC_CONFIRMATIONS</code> и т.д. в <code>.env</code>.</p>
+
+  <h3>Суммы в базовых единицах</h3>
+  <p>Все суммы (<code>amount</code>, <code>receivedAmount</code>, <code>feeAmount</code>) передаются в <strong>минимальных единицах</strong> соответствующей сети, без плавающей точки.</p>
+  <table>
+    <tr><th>Токен</th><th>Единица</th><th>Пример</th></tr>
+    <tr><td><code>ETH</code></td><td>wei (10⁻¹⁸)</td><td><code>1000000000000000000</code> = 1 ETH</td></tr>
+    <tr><td><code>BNB</code></td><td>wei (10⁻¹⁸)</td><td><code>1000000000000000000</code> = 1 BNB</td></tr>
+    <tr><td><code>TRX</code></td><td>sun (10⁻⁶)</td><td><code>1000000</code> = 1 TRX</td></tr>
+    <tr><td><code>SOL</code></td><td>lamport (10⁻⁹)</td><td><code>1000000000</code> = 1 SOL</td></tr>
+    <tr><td><code>USDT / USDC</code> на ETH</td><td>10⁻⁶</td><td><code>1000000</code> = 1 USDT</td></tr>
+    <tr><td><code>USDT / USDC</code> на BSC</td><td>10⁻¹⁸</td><td><code>1000000000000000000</code> = 1 USDT</td></tr>
+    <tr><td><code>USDT / USDC</code> на TRON</td><td>10⁻⁶</td><td><code>1000000</code> = 1 USDT</td></tr>
+  </table>
+</section>
+
+<!-- ═══ PAYMENT GET ═══ -->
+<section id="payment-get">
+  <h2>Статус платежа</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/payments/:id</span>
+      <span class="endpoint-desc">Информация о конкретном платеже</span>
+    </div>
+    <div class="endpoint-body">
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>:             <span class="str">"550e8400-e29b-41d4-a716-446655440000"</span>,
+    <span class="key">"userId"</span>:        <span class="str">"12345"</span>,
+    <span class="key">"network"</span>:       <span class="str">"ETH"</span>,
+    <span class="key">"token"</span>:         <span class="str">"USDT"</span>,
+    <span class="key">"address"</span>:       <span class="str">"0xc75f2BFb..."</span>,
+    <span class="key">"receivedAmount"</span>: <span class="str">"50000000"</span>,    <span class="cmt">// 50 USDT</span>
+    <span class="key">"feeAmount"</span>:      <span class="str">"500000"</span>,      <span class="cmt">// 0.5 USDT (1%)</span>
+    <span class="key">"status"</span>:         <span class="str">"COMPLETED"</span>,
+    <span class="key">"txHash"</span>:         <span class="str">"0xdeadbeef..."</span>,
+    <span class="key">"sweepTxHash"</span>:    <span class="str">"0xcafebabe..."</span>,
+    <span class="key">"confirmations"</span>:  <span class="num">12</span>,
+    <span class="key">"completedAt"</span>:    <span class="str">"2026-05-15T10:05:00.000Z"</span>,
+    <span class="key">"createdAt"</span>:      <span class="str">"2026-05-15T10:01:30.000Z"</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PAYMENT LIST ═══ -->
+<section id="payment-list">
+  <h2>Список платежей</h2>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/payments</span>
+      <span class="endpoint-desc">Все платежи с фильтрацией</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Query параметры</h4>
+      <table>
+        <tr><th>Параметр</th><th>Тип</th><th></th><th>Описание</th></tr>
+        <tr><td><code>userId</code></td><td>string</td><td><span class="badge badge-opt">optional</span></td><td>Фильтр по пользователю</td></tr>
+        <tr><td><code>status</code></td><td>string</td><td><span class="badge badge-opt">optional</span></td><td>DETECTED | CONFIRMED | SWEEPING | COMPLETED | FAILED</td></tr>
+        <tr><td><code>page</code></td><td>number</td><td><span class="badge badge-opt">optional</span></td><td>default: 1</td></tr>
+        <tr><td><code>limit</code></td><td>number</td><td><span class="badge badge-opt">optional</span></td><td>1–100, default: 20</td></tr>
+      </table>
+
+      <h4>Пример</h4>
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="url">GET</span> /api/v1/payments?userId=12345&status=COMPLETED&limit=10
+<span class="hdr">X-Api-Key:</span> cpg_...</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WITHDRAWAL CREATE ═══ -->
+<section id="withdrawal-create">
+  <h2>Создать вывод</h2>
+
+  <p>Выводы отправляются с мастер-кошелька на указанный адрес. Требуется достаточный баланс мастер-кошелька.</p>
+
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/api/v1/withdrawals</span>
+      <span class="endpoint-desc">Инициировать вывод средств</span>
+    </div>
+    <div class="endpoint-body">
+      <h4>Тело запроса</h4>
+      <table>
+        <tr><th>Поле</th><th>Тип</th><th></th><th>Описание</th></tr>
+        <tr><td><code>network</code></td><td>string</td><td><span class="badge badge-req">required</span></td><td>ETH | BSC | TRON | SOLANA</td></tr>
+        <tr><td><code>token</code></td><td>string</td><td><span class="badge badge-req">required</span></td><td>ETH | BNB | TRX | SOL | USDT | USDC</td></tr>
+        <tr><td><code>amount</code></td><td>string</td><td><span class="badge badge-req">required</span></td><td>Сумма в базовых единицах (строка, не float)</td></tr>
+        <tr><td><code>toAddress</code></td><td>string</td><td><span class="badge badge-req">required</span></td><td>Адрес получателя</td></tr>
+        <tr><td><code>clientReference</code></td><td>string</td><td><span class="badge badge-opt">optional</span></td><td>Ваш внутренний ID для сверки</td></tr>
+      </table>
+
+      <h4>Пример</h4>
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="url">POST</span> /api/v1/withdrawals
+<span class="hdr">X-Api-Key:</span> cpg_...
+
+{
+  <span class="key">"network"</span>:         <span class="str">"ETH"</span>,
+  <span class="key">"token"</span>:           <span class="str">"USDT"</span>,
+  <span class="key">"amount"</span>:          <span class="str">"50000000"</span>,
+  <span class="key">"toAddress"</span>:       <span class="str">"0xRecipient..."</span>,
+  <span class="key">"clientReference"</span>: <span class="str">"order_789"</span>
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section id="withdrawal-get">
+  <h2>Статус вывода</h2>
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/withdrawals/:id</span>
+    </div>
+    <div class="endpoint-body">
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>:              <span class="str">"uuid"</span>,
+    <span class="key">"network"</span>:        <span class="str">"ETH"</span>,
+    <span class="key">"token"</span>:          <span class="str">"USDT"</span>,
+    <span class="key">"amount"</span>:         <span class="str">"50000000"</span>,
+    <span class="key">"toAddress"</span>:      <span class="str">"0xRecipient..."</span>,
+    <span class="key">"status"</span>:         <span class="str">"COMPLETED"</span>,
+    <span class="key">"txHash"</span>:         <span class="str">"0x..."</span>,
+    <span class="key">"clientReference"</span>: <span class="str">"order_789"</span>,
+    <span class="key">"createdAt"</span>:      <span class="str">"2026-05-15T11:00:00.000Z"</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section id="withdrawal-list">
+  <h2>Список выводов</h2>
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/withdrawals</span>
+    </div>
+    <div class="endpoint-body">
+      <p>Query параметры: <code>page</code>, <code>limit</code> (аналогично платежам).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ME / STATS ═══ -->
+<section id="me">
+  <h2>Профиль клиента</h2>
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/me</span>
+    </div>
+    <div class="endpoint-body">
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>:         <span class="str">"uuid"</span>,
+    <span class="key">"name"</span>:       <span class="str">"My Shop"</span>,
+    <span class="key">"email"</span>:      <span class="str">"shop@example.com"</span>,
+    <span class="key">"webhookUrl"</span>: <span class="str">"https://example.com/webhook"</span>,
+    <span class="key">"feePercent"</span>: <span class="str">"1.0"</span>,
+    <span class="key">"isActive"</span>:   <span class="kw">true</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section id="stats">
+  <h2>Статистика</h2>
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/stats</span>
+    </div>
+    <div class="endpoint-body">
+      <pre><button class="copy-btn" onclick="copy(this)">copy</button><code>{
+  <span class="key">"data"</span>: {
+    <span class="key">"payments"</span>: {
+      <span class="key">"COMPLETED"</span>: <span class="num">142</span>,
+      <span class="key">"DETECTED"</span>:  <span class="num">3</span>,
+      <span class="key">"FAILED"</span>:    <span class="num">1</span>
+    },
+    <span class="key">"withdrawals"</span>: { <span class="key">"COMPLETED"</span>: <span class="num">18</span> },
+    <span class="key">"volume"</span>: {
+      <span class="key">"totalReceived"</span>: <span class="str">"7100000000"</span>,
+      <span class="key">"totalFeesPaid"</span>: <span class="str">"71000000"</span>
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WEBHOOKS ═══ -->
+<section id="webhooks">
+  <h2>Вебхуки</h2>
+
+  <p>Gateway делает <code>POST</code> запрос на ваш <code>webhookUrl</code> при каждом изменении статуса. Если ваш сервер вернул не 2xx — Gateway повторит доставку с экспоненциальной задержкой (до 5 попыток).</p>
+
+  <h3>Настройка webhook URL</h3>
+  <p>Задаётся через панель администратора при создании/редактировании клиента. Должен быть доступен публично по HTTPS.</p>
+
+  <h3>Структура события</h3>
+  <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="url">POST</span> https://your-server.com/webhook
+<span class="hdr">Content-Type:</span> application/json
+<span class="hdr">X-Webhook-Signature:</span> sha256=a3f9b2c1...   <span class="cmt">// HMAC-SHA256 если задан webhookSecret</span>
+
+{
+  <span class="key">"event"</span>:     <span class="str">"payment.confirmed"</span>,
+  <span class="key">"paymentId"</span>: <span class="str">"550e8400-..."</span>,
+  <span class="key">"userId"</span>:    <span class="str">"12345"</span>,
+  <span class="key">"network"</span>:   <span class="str">"ETH"</span>,
+  <span class="key">"token"</span>:     <span class="str">"USDT"</span>,
+  <span class="key">"amount"</span>:    <span class="str">"50000000"</span>,
+  <span class="key">"status"</span>:    <span class="str">"CONFIRMED"</span>,
+  <span class="key">"txHash"</span>:    <span class="str">"0xdeadbeef..."</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"2026-05-15T10:03:00.000Z"</span>
+}</code></pre>
+</section>
+
+<section id="webhook-events">
+  <h2>Типы вебхук-событий</h2>
+
+  <table>
+    <tr><th>Событие</th><th>Когда</th><th>Поля</th></tr>
+    <tr>
+      <td><code>payment.detected</code></td>
+      <td>Перевод обнаружен в блоке</td>
+      <td>paymentId, userId, network, token, amount, txHash</td>
+    </tr>
+    <tr>
+      <td><code>payment.confirmed</code></td>
+      <td>Набрано N подтверждений</td>
+      <td>paymentId, userId, network, token, amount, txHash</td>
+    </tr>
+    <tr>
+      <td><code>payment.completed</code></td>
+      <td>Средства получены мастер-кошельком</td>
+      <td>paymentId, userId, network, token, amount, txHash (sweep tx)</td>
+    </tr>
+    <tr>
+      <td><code>payment.failed</code></td>
+      <td>Ошибка при свипе</td>
+      <td>paymentId, userId, network, token</td>
+    </tr>
+    <tr>
+      <td><code>withdrawal.completed</code></td>
+      <td>Вывод исполнен</td>
+      <td>withdrawalId, network, token, amount, txHash</td>
+    </tr>
+    <tr>
+      <td><code>withdrawal.failed</code></td>
+      <td>Ошибка вывода</td>
+      <td>withdrawalId, network, token</td>
+    </tr>
+  </table>
+</section>
+
+<section id="webhook-security">
+  <h2>Безопасность вебхуков</h2>
+
+  <p>Если у клиента задан <code>webhookSecret</code>, каждый запрос подписывается. Проверяйте подпись перед обработкой.</p>
+
+  <pre><button class="copy-btn" onclick="copy(this)">copy</button><code><span class="cmt">// Node.js — проверка подписи</span>
+<span class="kw">const</span> crypto = <span class="kw">require</span>(<span class="str">'crypto'</span>);
+
+<span class="kw">function</span> verifyWebhook(body, signature, secret) {
+  <span class="kw">const</span> expected = <span class="str">'sha256='</span> +
+    crypto.createHmac(<span class="str">'sha256'</span>, secret)
+          .update(body)          <span class="cmt">// raw body bytes</span>
+          .digest(<span class="str">'hex'</span>);
+  <span class="kw">return</span> crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
+}
+
+<span class="cmt">// Express</span>
+app.post(<span class="str">'/webhook'</span>, express.raw({ type: <span class="str">'*/*'</span> }), (req, res) => {
+  <span class="kw">const</span> sig = req.headers[<span class="str">'x-webhook-signature'</span>];
+  <span class="kw">if</span> (!verifyWebhook(req.body, sig, process.env.WEBHOOK_SECRET)) {
+    <span class="kw">return</span> res.status(<span class="num">401</span>).send(<span class="str">'Invalid signature'</span>);
+  }
+  <span class="kw">const</span> event = JSON.parse(req.body);
+  <span class="cmt">// обрабатываем event...</span>
+  res.status(<span class="num">200</span>).send(<span class="str">'ok'</span>);
+});</code></pre>
+
+  <div class="callout callout-warn">Всегда проверяйте подпись. Без этого любой желающий может отправить фейковый вебхук на ваш сервер.</div>
+
+  <h3>Идемпотентность</h3>
+  <p>Используйте <code>paymentId</code> / <code>withdrawalId</code> как идемпотентный ключ. Один и тот же событие может прийти несколько раз (ретраи, network issues) — ваш обработчик должен быть устойчив к дублям.</p>
+</section>
+
+<!-- ═══ NETWORKS ═══ -->
+<section id="networks">
+  <h2>Сети и токены</h2>
+
+  <table>
+    <tr><th>Сеть</th><th>Код</th><th>Нативный токен</th><th>Поддерживаемые токены</th></tr>
+    <tr>
+      <td><span class="chip chip-eth">Ethereum</span></td>
+      <td><code>ETH</code></td>
+      <td><code>ETH</code></td>
+      <td><code>ETH</code>, <code>USDT</code>, <code>USDC</code></td>
+    </tr>
+    <tr>
+      <td><span class="chip chip-bsc">BNB Chain</span></td>
+      <td><code>BSC</code></td>
+      <td><code>BNB</code></td>
+      <td><code>BNB</code>, <code>USDT</code>, <code>USDC</code></td>
+    </tr>
+    <tr>
+      <td><span class="chip chip-tron">TRON</span></td>
+      <td><code>TRON</code></td>
+      <td><code>TRX</code></td>
+      <td><code>TRX</code>, <code>USDT</code>, <code>USDC</code></td>
+    </tr>
+    <tr>
+      <td><span class="chip chip-sol">Solana</span></td>
+      <td><code>SOLANA</code></td>
+      <td><code>SOL</code></td>
+      <td><code>SOL</code>, <code>USDT</code>, <code>USDC</code></td>
+    </tr>
+  </table>
+
+  <h3>Адреса контрактов (Mainnet)</h3>
+  <table>
+    <tr><th>Токен</th><th>Сеть</th><th>Адрес контракта</th></tr>
+    <tr><td>USDT</td><td>ETH</td><td><code>0xdAC17F958D2ee523a2206206994597C13D831ec7</code></td></tr>
+    <tr><td>USDC</td><td>ETH</td><td><code>0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48</code></td></tr>
+    <tr><td>USDT</td><td>BSC</td><td><code>0x55d398326f99059fF775485246999027B3197955</code></td></tr>
+    <tr><td>USDC</td><td>BSC</td><td><code>0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d</code></td></tr>
+    <tr><td>USDT</td><td>TRON</td><td><code>TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t</code></td></tr>
+    <tr><td>USDT</td><td>Solana</td><td><code>Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB</code></td></tr>
+    <tr><td>USDC</td><td>Solana</td><td><code>EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v</code></td></tr>
+  </table>
+</section>
+
+<!-- ═══ ERRORS ═══ -->
+<section id="errors">
+  <h2>Коды ошибок</h2>
+
+  <p>API возвращает стандартные HTTP коды. Тело ответа при ошибке:</p>
+  <pre><code>{ <span class="key">"error"</span>: <span class="str">"Human-readable message"</span> }</code></pre>
+
+  <table>
+    <tr><th>HTTP</th><th>Ситуация</th></tr>
+    <tr><td><code>400</code></td><td>Невалидные параметры запроса (неверный network, token, сумма)</td></tr>
+    <tr><td><code>401</code></td><td>API ключ не передан или неверен</td></tr>
+    <tr><td><code>403</code></td><td>IP не в белом списке (Admin API), или неверный Admin Secret</td></tr>
+    <tr><td><code>404</code></td><td>Платёж или вывод не найден</td></tr>
+    <tr><td><code>429</code></td><td>Превышен rate limit (100 запросов / 1 минута на ключ)</td></tr>
+    <tr><td><code>500</code></td><td>Внутренняя ошибка сервера</td></tr>
+  </table>
+
+  <h3>Частые ошибки</h3>
+  <table>
+    <tr><th>Сообщение</th><th>Причина</th></tr>
+    <tr><td>Token X is not supported on Y</td><td>Комбинация network + token не поддерживается</td></tr>
+    <tr><td>Client not found or inactive</td><td>API ключ верен, но аккаунт деактивирован</td></tr>
+    <tr><td>Insufficient funds in hot wallet</td><td>Баланс мастер-кошелька меньше запрошенной суммы вывода</td></tr>
+    <tr><td>Invalid X address: ...</td><td>Адрес получателя не валиден для указанной сети</td></tr>
+  </table>
+</section>
+
+<!-- ═══ LIMITS ═══ -->
+<section id="limits">
+  <h2>Лимиты и ограничения</h2>
+
+  <table>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Rate limit</td><td>100 запросов / минуту на API ключ</td></tr>
+    <tr><td>Макс. записей на страницу</td><td>100</td></tr>
+    <tr><td>userId макс. длина</td><td>255 символов</td></tr>
+    <tr><td>Вебхук — попыток доставки</td><td>5 (с экспоненциальным backoff)</td></tr>
+    <tr><td>Sweep — попыток</td><td>5 (exponential, от 10 сек)</td></tr>
+    <tr><td>Блоков назад при первом старте</td><td>до 1000 блоков</td></tr>
+  </table>
+
+  <h3>Переменные окружения</h3>
+  <table>
+    <tr><th>Переменная</th><th>По умолчанию</th><th>Описание</th></tr>
+    <tr><td><code>ETH_CONFIRMATIONS</code></td><td>12</td><td>Подтверждений для ETH</td></tr>
+    <tr><td><code>BSC_CONFIRMATIONS</code></td><td>15</td><td>Подтверждений для BSC</td></tr>
+    <tr><td><code>TRON_CONFIRMATIONS</code></td><td>19</td><td>Подтверждений для TRON</td></tr>
+    <tr><td><code>SOLANA_CONFIRMATIONS</code></td><td>1</td><td>Подтверждений для Solana</td></tr>
+    <tr><td><code>DEFAULT_FEE_PERCENT</code></td><td>1.0</td><td>Комиссия шлюза (%)</td></tr>
+    <tr><td><code>WEBHOOK_MAX_RETRIES</code></td><td>5</td><td>Попыток доставки вебхука</td></tr>
+    <tr><td><code>WEBHOOK_RETRY_DELAY_MS</code></td><td>5000</td><td>Начальная задержка ретрая (мс)</td></tr>
+    <tr><td><code>ADMIN_WHITELIST_IPS</code></td><td><em>пусто</em></td><td>IP через запятую, только для /admin/*</td></tr>
+  </table>
+</section>
+
+</main>
+
+<script>
+  function copy(btn) {
+    const pre = btn.closest('pre');
+    const text = pre.querySelector('code').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -65% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

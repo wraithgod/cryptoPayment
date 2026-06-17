@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoGateway Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    nav { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav h1 { font-size: 18px; font-weight: 700; color: #63b3ed; }
+    nav span { font-size: 13px; color: #718096; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 8px; }
+    .card .value { font-size: 32px; font-weight: 700; }
+    .green { color: #68d391; }
+    .blue { color: #63b3ed; }
+    .yellow { color: #f6e05e; }
+    .red { color: #fc8181; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-header h2 { font-size: 16px; font-weight: 600; }
+    .tabs { display: flex; gap: 4px; background: #1a1f2e; border-radius: 8px; padding: 4px; margin-bottom: 24px; border: 1px solid #2d3748; }
+    .tab { padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; border: none; background: transparent; color: #718096; transition: all 0.2s; }
+    .tab.active { background: #2d3748; color: #e2e8f0; }
+    .tab:hover:not(.active) { color: #a0aec0; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #718096; border-bottom: 1px solid #2d3748; }
+    td { padding: 12px; font-size: 13px; border-bottom: 1px solid #1a1f2e; vertical-align: middle; }
+    tr:hover td { background: #1e2433; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .badge-green  { background: #1a3a2a; color: #68d391; }
+    .badge-blue   { background: #1a2a3a; color: #63b3ed; }
+    .badge-yellow { background: #3a3a1a; color: #f6e05e; }
+    .badge-red    { background: #3a1a1a; color: #fc8181; }
+    .badge-gray   { background: #2d3748; color: #a0aec0; }
+    .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+    .btn-primary { background: #3182ce; color: white; }
+    .btn-primary:hover { background: #2b6cb0; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; background: #2d3748; color: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-sm:hover { background: #3a4556; }
+    input, select { background: #2d3748; border: 1px solid #4a5568; border-radius: 8px; padding: 8px 12px; color: #e2e8f0; font-size: 13px; outline: none; }
+    input:focus, select:focus { border-color: #63b3ed; }
+    code { font-family: 'Courier New', monospace; font-size: 12px; background: #2d3748; padding: 2px 6px; border-radius: 4px; color: #63b3ed; word-break: break-all; }
+    .empty  { text-align: center; padding: 48px; color: #718096; }
+    .loader { text-align: center; padding: 32px; color: #718096; }
+    .network-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .network-ETH    { background: #1a2a4a; color: #7fa8d4; }
+    .network-BSC    { background: #3a2a1a; color: #f0b90b; }
+    .network-TRON   { background: #2a1a3a; color: #cc0000; }
+    .network-SOLANA { background: #1a3a3a; color: #9945FF; }
+    .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; font-size: 13px; color: #718096; }
+    .pagination button { background: #2d3748; border: none; color: #e2e8f0; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    #auth-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    #auth-box { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 16px; padding: 48px; width: 380px; text-align: center; }
+    #auth-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    #auth-box p  { color: #718096; margin-bottom: 24px; font-size: 14px; }
+    #auth-box input { width: 100%; margin-bottom: 12px; }
+    #auth-error { color: #fc8181; font-size: 13px; margin-top: 8px; display: none; }
+    #main-app { display: none; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; color: #a0aec0; margin-bottom: 6px; }
+    .form-group input, .form-group select { width: 100%; }
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert-success { background: #1a3a2a; border: 1px solid #2d6a4f; color: #68d391; }
+    .alert-error   { background: #2d1515; border: 1px solid #7f1d1d; color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div id="auth-box">
+    <h2>CryptoGateway</h2>
+    <p>Admin Panel</p>
+    <input type="password" id="admin-secret" placeholder="Admin Secret" />
+    <button class="btn btn-primary" style="width:100%" onclick="login()">Sign In</button>
+    <div id="auth-error">Invalid admin secret</div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="main-app">
+  <nav>
+    <h1>CryptoGateway Admin</h1>
+    <span id="nav-time"></span>
+  </nav>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+      <button class="tab" onclick="showTab('payments')">Payments</button>
+      <button class="tab" onclick="showTab('webhooks')">Webhooks</button>
+      <button class="tab" onclick="showTab('settings')">Settings</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="tab-dashboard">
+      <div class="grid-4">
+        <div class="card"><h3>Completed</h3><div class="value green" id="stat-completed">—</div></div>
+        <div class="card"><h3>Pending / Detected</h3><div class="value yellow" id="stat-pending">—</div></div>
+        <div class="card"><h3>Sweeping</h3><div class="value blue" id="stat-sweeping">—</div></div>
+        <div class="card"><h3>Failed</h3><div class="value red" id="stat-failed">—</div></div>
+      </div>
+      <div class="card">
+        <div class="section-header">
+          <h2>Recent Completed Payments</h2>
+          <button class="btn btn-sm" onclick="loadDashboard()">Refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>User ID</th><th>Network</th><th>Received</th><th>Fee</th><th>Completed</th></tr></thead>
+          <tbody id="recent-payments-body"><tr><td colspan="6" class="loader">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Payments -->
+    <div id="tab-payments" style="display:none">
+      <div class="section-header">
+        <h2>All Payments</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="payment-userid-filter" placeholder="User ID..." style="width:150px" oninput="debouncePayments()" />
+          <select id="payment-network-filter" onchange="loadPayments()">
+            <option value="">All Networks</option>
+            <option>ETH</option><option>BSC</option><option>TRON</option><option>SOLANA</option>
+          </select>
+          <select id="payment-status-filter" onchange="loadPayments()">
+            <option value="">All Status</option>
+            <option>PENDING</option><option>DETECTED</option><option>CONFIRMED</option>
+            <option>SWEEPING</option><option>COMPLETED</option><option>FAILED</option><option>EXPIRED</option>
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="loadPayments()">Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>User ID</th><th>Network / Token</th><th>Address</th>
+              <th>Received</th><th>Fee</th><th>Status</th><th>Tx Hash</th><th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="payments-body"><tr><td colspan="9" class="loader">Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="payments-pagination"></div>
+      </div>
+    </div>
+
+    <!-- Webhooks -->
+    <div id="tab-webhooks" style="display:none">
+      <div class="section-header">
+        <h2>Webhook Events</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#a0aec0;cursor:pointer">
+            <input type="checkbox" id="webhooks-failed-only" onchange="loadWebhooks()" /> Failed only
+          </label>
+          <button class="btn btn-sm btn-primary" onclick="loadWebhooks()">Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Event</th><th>Attempts</th><th>Delivered</th><th>Last Error</th><th>Created</th><th></th></tr></thead>
+          <tbody id="webhooks-body"><tr><td colspan="6" class="loader">Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="webhooks-pagination"></div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="tab-settings" style="display:none">
+      <div class="section-header"><h2>Operator Settings</h2></div>
+      <div class="card" style="max-width:480px">
+        <div id="settings-success" class="alert alert-success">Settings saved successfully.</div>
+        <div id="settings-error"  class="alert alert-error"></div>
+        <div class="form-group">
+          <label>Fee % (applied to each payment)</label>
+          <input id="s-fee" type="number" step="0.01" min="0" max="50" placeholder="1.0" />
+        </div>
+        <div class="form-group">
+          <label>Webhook URL</label>
+          <input id="s-webhook" type="url" placeholder="https://your-server.com/webhook" />
+        </div>
+        <div class="form-group">
+          <label>Webhook Secret <span style="font-size:11px;color:#718096">(leave blank to keep current)</span></label>
+          <input id="s-secret" type="password" placeholder="••••••••••••••••" />
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+          <span id="settings-updated" style="font-size:12px;color:#718096"></span>
+          <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let ADMIN_SECRET = '';
+  const pages   = { payments: 1, webhooks: 1 };
+  const loaders = { payments: null, webhooks: null };
+
+  // Token → decimal places for human-readable display
+  const DECIMALS = { ETH: 18, BNB: 18, TRX: 6, SOL: 9, USDT: 6, USDC: 6 };
+
+  function fmtAmt(raw, token) {
+    if (!raw || parseFloat(raw) === 0) return '0 ' + (token ?? '');
+    const dec = DECIMALS[token] ?? 18;
+    const val = parseFloat(raw) / Math.pow(10, dec);
+    const str = val < 0.000001 ? val.toExponential(4) : val.toFixed(8).replace(/\.?0+$/, '');
+    return str + ' ' + (token ?? '');
+  }
+
+  function formatDate(d) { return d ? new Date(d).toLocaleString() : '—'; }
+
+  function statusBadge(s) {
+    const map = {
+      PENDING: 'badge-yellow', DETECTED: 'badge-blue', CONFIRMED: 'badge-blue',
+      SWEEPING: 'badge-blue', COMPLETED: 'badge-green', FAILED: 'badge-red', EXPIRED: 'badge-gray',
+    };
+    return `<span class="badge ${map[s] || 'badge-gray'}">${s}</span>`;
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────────────────────
+
+  function login() {
+    ADMIN_SECRET = document.getElementById('admin-secret').value;
+    fetch('/api/v1/admin/stats', { headers: { 'x-admin-secret': ADMIN_SECRET } })
+      .then(r => {
+        if (!r.ok) throw new Error();
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        showTab('dashboard');
+        startClock();
+      })
+      .catch(() => {
+        document.getElementById('auth-error').style.display = 'block';
+      });
+  }
+
+  document.getElementById('admin-secret').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  function startClock() {
+    const el = document.getElementById('nav-time');
+    el.textContent = new Date().toLocaleTimeString();
+    setInterval(() => { el.textContent = new Date().toLocaleTimeString(); }, 1000);
+  }
+
+  // ── API helper ────────────────────────────────────────────────────────────────
+
+  async function api(path, opts = {}) {
+    const r = await fetch('/api/v1' + path, {
+      ...opts,
+      headers: { 'x-admin-secret': ADMIN_SECRET, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    if (!r.ok) {
+      let msg;
+      try {
+        const j = await r.json();
+        msg = j.error || j.message || JSON.stringify(j);
+      } catch { msg = r.statusText; }
+      throw new Error(msg);
+    }
+    return r.json();
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────────
+
+  const TAB_NAMES = ['dashboard', 'payments', 'webhooks', 'settings'];
+
+  function showTab(tab) {
+    TAB_NAMES.forEach((t, i) => {
+      document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+      document.querySelectorAll('.tab')[i].classList.toggle('active', t === tab);
+    });
+    if (tab === 'dashboard') loadDashboard();
+    if (tab === 'payments')  { pages.payments = 1; loadPayments(); }
+    if (tab === 'webhooks')  { pages.webhooks = 1; loadWebhooks(); }
+    if (tab === 'settings')  loadSettings();
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────────
+
+  async function loadDashboard() {
+    const { data } = await api('/admin/stats');
+    const p = data.payments;
+    document.getElementById('stat-completed').textContent = p.COMPLETED ?? 0;
+    document.getElementById('stat-pending').textContent   = (p.PENDING ?? 0) + (p.DETECTED ?? 0);
+    document.getElementById('stat-sweeping').textContent  = p.SWEEPING ?? 0;
+    document.getElementById('stat-failed').textContent    = p.FAILED ?? 0;
+
+    const tbody = document.getElementById('recent-payments-body');
+    if (!data.recentCompletedPayments.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No completed payments yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.recentCompletedPayments.map(p => `
+      <tr>
+        <td><code title="${p.id}">${p.id.slice(0,8)}…</code></td>
+        <td><code style="font-size:11px">${p.userId ?? '—'}</code></td>
+        <td><span class="network-badge network-${p.network}">${p.network}</span></td>
+        <td class="green" style="font-variant-numeric:tabular-nums">${fmtAmt(p.amount, p.token)}</td>
+        <td style="color:#718096;font-variant-numeric:tabular-nums">${fmtAmt(p.fee, p.token)}</td>
+        <td style="color:#718096">${formatDate(p.completedAt)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────────────
+
+  const EXPLORERS = {
+    ETH:    h => `https://sepolia.etherscan.io/tx/${h}`,
+    BSC:    h => `https://bscscan.com/tx/${h}`,
+    TRON:   h => `https://tronscan.org/#/transaction/${h}`,
+    SOLANA: h => `https://solscan.io/tx/${h}`,
+  };
+
+  let _paymentDebounce;
+  function debouncePayments() {
+    clearTimeout(_paymentDebounce);
+    _paymentDebounce = setTimeout(() => { pages.payments = 1; loadPayments(); }, 400);
+  }
+
+  async function loadPayments() {
+    const network = document.getElementById('payment-network-filter').value;
+    const status  = document.getElementById('payment-status-filter').value;
+    const userId  = document.getElementById('payment-userid-filter').value.trim();
+    const params  = new URLSearchParams({ page: pages.payments, limit: 20 });
+    if (network) params.set('network', network);
+    if (status)  params.set('status', status);
+    if (userId)  params.set('userId', userId);
+
+    const { data, pagination } = await api('/admin/payments?' + params);
+    const tbody = document.getElementById('payments-body');
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">No payments found</td></tr>';
+      renderPagination('payments', pagination, loadPayments);
+      return;
+    }
+
+    tbody.innerHTML = data.map(p => {
+      const explorerUrl = EXPLORERS[p.network]?.(p.txHash);
+      const txShort     = p.txHash ? p.txHash.slice(0, 10) + '…' : '—';
+      const txLink      = p.txHash && explorerUrl
+        ? `<a href="${explorerUrl}" target="_blank" style="color:#63b3ed;text-decoration:none" title="${p.txHash}">${txShort}</a>`
+        : `<span style="color:#718096">${txShort}</span>`;
+      const addrShort = p.address
+        ? p.address.slice(0, 8) + '…' + p.address.slice(-4)
+        : '—';
+
+      return `<tr>
+        <td><code title="${p.id}">${p.id.slice(0,8)}…</code></td>
+        <td><code style="font-size:11px">${p.userId ?? '—'}</code></td>
+        <td>
+          <span class="network-badge network-${p.network}">${p.network}</span>
+          <span style="font-size:12px;color:#a0aec0;margin-left:4px">${p.token}</span>
+        </td>
+        <td><code style="font-size:11px" title="${p.address}">${addrShort}</code></td>
+        <td class="green" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtAmt(p.receivedAmount, p.token)}</td>
+        <td style="color:#718096;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtAmt(p.feeAmount, p.token)}</td>
+        <td>${statusBadge(p.status)}</td>
+        <td style="white-space:nowrap">${txLink}</td>
+        <td style="color:#718096;white-space:nowrap">${formatDate(p.createdAt)}</td>
+      </tr>`;
+    }).join('');
+
+    renderPagination('payments', pagination, loadPayments);
+  }
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────────
+
+  async function loadWebhooks() {
+    const failed = document.getElementById('webhooks-failed-only').checked;
+    const params = new URLSearchParams({ page: pages.webhooks, limit: 50 });
+    if (failed) params.set('failed', 'true');
+    const { data, pagination } = await api('/admin/webhooks?' + params);
+    const tbody = document.getElementById('webhooks-body');
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No webhook events</td></tr>';
+      renderPagination('webhooks', pagination, loadWebhooks);
+      return;
+    }
+
+    tbody.innerHTML = data.map(w => `
+      <tr>
+        <td><code>${w.eventType}</code></td>
+        <td>${w.attempts} / ${w.maxAttempts}</td>
+        <td>${w.deliveredAt
+          ? '<span class="badge badge-green">Delivered</span>'
+          : '<span class="badge badge-yellow">Pending</span>'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#718096">${w.lastError ?? '—'}</td>
+        <td style="color:#718096">${formatDate(w.createdAt)}</td>
+        <td><button class="btn btn-sm" onclick="replayWebhook('${w.id}')">Replay</button></td>
+      </tr>`).join('');
+
+    renderPagination('webhooks', pagination, loadWebhooks);
+  }
+
+  async function replayWebhook(id) {
+    try {
+      await api(`/admin/webhooks/${id}/replay`, { method: 'POST' });
+      alert('Webhook queued for replay.');
+      loadWebhooks();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  // ── Settings ──────────────────────────────────────────────────────────────────
+
+  async function loadSettings() {
+    document.getElementById('settings-success').style.display = 'none';
+    document.getElementById('settings-error').style.display   = 'none';
+    try {
+      const { data } = await api('/admin/settings');
+      document.getElementById('s-fee').value     = data.feePercent ?? '';
+      document.getElementById('s-webhook').value = data.webhookUrl ?? '';
+      document.getElementById('s-secret').value  = '';
+      document.getElementById('settings-updated').textContent =
+        data.updatedAt ? 'Last updated: ' + formatDate(data.updatedAt) : '';
+    } catch (e) {
+      const el = document.getElementById('settings-error');
+      el.textContent = 'Failed to load settings: ' + e.message;
+      el.style.display = 'block';
+    }
+  }
+
+  async function saveSettings() {
+    const errEl = document.getElementById('settings-error');
+    const okEl  = document.getElementById('settings-success');
+    errEl.style.display = 'none';
+    okEl.style.display  = 'none';
+
+    const body = {};
+    const fee = parseFloat(document.getElementById('s-fee').value);
+    if (!isNaN(fee)) body.feePercent = fee;
+    const webhook = document.getElementById('s-webhook').value.trim();
+    body.webhookUrl = webhook || null;
+    const secret = document.getElementById('s-secret').value;
+    if (secret) body.webhookSecret = secret;
+
+    try {
+      const { data } = await api('/admin/settings', { method: 'PATCH', body: JSON.stringify(body) });
+      document.getElementById('s-fee').value     = data.feePercent;
+      document.getElementById('s-webhook').value = data.webhookUrl ?? '';
+      document.getElementById('s-secret').value  = '';
+      document.getElementById('settings-updated').textContent = 'Last updated: ' + formatDate(data.updatedAt);
+      okEl.style.display = 'block';
+      setTimeout(() => { okEl.style.display = 'none'; }, 3000);
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  // ── Pagination ────────────────────────────────────────────────────────────────
+
+  function goPage(section, delta) {
+    pages[section] += delta;
+    if (loaders[section]) loaders[section]();
+  }
+
+  function renderPagination(section, pagination, loader) {
+    if (!pagination) return;
+    loaders[section] = loader;
+    const totalPages = pagination.pages ?? Math.ceil(pagination.total / pagination.limit) ?? 1;
+    const el = document.getElementById(section + '-pagination');
+    const prevDis = pagination.page <= 1            ? 'disabled' : '';
+    const nextDis = pagination.page >= totalPages   ? 'disabled' : '';
+    el.innerHTML =
+      '<span>' + (pagination.total ?? 0) + ' total</span>' +
+      '<button ' + prevDis + ' onclick="goPage(\'' + section + '\',-1)">← Prev</button>' +
+      '<span>Page ' + pagination.page + ' / ' + totalPages + '</span>' +
+      '<button ' + nextDis + ' onclick="goPage(\'' + section + '\',1)">Next →</button>';
+  }
+</script>
+</body>
+</html>

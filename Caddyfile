@@ -1,0 +1,25 @@
+# Caddyfile — auto-HTTPS via Let's Encrypt (zero config)
+# Replace YOUR_DOMAIN with your actual domain, e.g. pay.example.com
+# Run: caddy run --config Caddyfile
+
+YOUR_DOMAIN {
+    encode gzip
+
+    # Forward all traffic to Fastify API
+    reverse_proxy localhost:3000 {
+        # Pass real client IP so rate-limit and IP whitelist work correctly
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # Health check — restart Caddy upstreams if API goes down
+        health_uri /health
+        health_interval 15s
+        health_timeout 5s
+    }
+}
+
+# Worker health endpoint (internal only — remove if not needed externally)
+:3001 {
+    reverse_proxy localhost:3001
+}
