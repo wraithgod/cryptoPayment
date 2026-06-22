@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CryptoGateway — Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .page-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .page-header p {
+      font-size: 14px;
+      color: #718096;
+      margin-top: 6px;
+    }
+    .secret-bar {
+      display: flex;
+      gap: 8px;
+      max-width: 420px;
+      margin: 16px auto 0;
+    }
+    .secret-bar input {
+      flex: 1;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+    }
+    .secret-bar input:focus { border-color: #58a6ff; }
+    .secret-bar input::placeholder { color: #484f58; }
+
+    /* ── Step indicator ── */
+    .steps-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      max-width: 680px;
+      margin: 0 auto 40px;
+    }
+    .step-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid #30363d;
+      background: #161b22;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #484f58;
+      transition: all 0.3s;
+    }
+    .step-node.active  .step-circle { border-color: #58a6ff; color: #58a6ff; background: #0d1b2a; box-shadow: 0 0 14px #58a6ff44; }
+    .step-node.done    .step-circle { border-color: #3fb950; color: #fff; background: #3fb950; }
+    .step-label {
+      font-size: 11px;
+      color: #484f58;
+      white-space: nowrap;
+      transition: color 0.3s;
+    }
+    .step-node.active .step-label { color: #58a6ff; }
+    .step-node.done   .step-label { color: #3fb950; }
+    .step-connector {
+      flex: 1;
+      height: 2px;
+      background: #30363d;
+      margin: 0 6px;
+      margin-bottom: 22px;
+      transition: background 0.4s;
+      min-width: 40px;
+    }
+    .step-connector.done { background: #3fb950; }
+
+    /* ── Cards ── */
+    .card {
+      max-width: 560px;
+      margin: 0 auto;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 14px;
+      padding: 28px 32px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: 13px;
+      color: #8b949e;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    /* ── Form ── */
+    .form-row { margin-bottom: 14px; }
+    .form-row label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8b949e;
+      margin-bottom: 6px;
+    }
+    .form-row input, .form-row select {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e2e8f0;
+      font-size: 14px;
+      outline: none;
+      appearance: none;
+    }
+    .form-row input:focus, .form-row select:focus { border-color: #58a6ff; }
+    .form-row select option { background: #161b22; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 11px 22px;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #238636; color: #fff; width: 100%; margin-top: 4px; }
+    .btn-primary:hover:not(:disabled) { background: #2ea043; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: #8b949e; border: 1px solid #30363d; font-size: 12px; padding: 6px 14px; }
+    .btn-ghost:hover { border-color: #58a6ff; color: #58a6ff; }
+
+    /* ── Address display ── */
+    .address-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .address-label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .address-value {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .address-copy {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .copy-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #8b949e;
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    .copy-btn.copied { border-color: #3fb950; color: #3fb950; }
+
+    .meta-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .meta-chip {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    .meta-chip span { color: #8b949e; margin-right: 4px; }
+    .meta-chip strong { color: #e2e8f0; }
+
+    /* ── Waiting indicator ── */
+    .waiting {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0d1b2a;
+      border: 1px solid #1f4068;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #58a6ff;
+    }
+    .spin {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #1f4068;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Timeline ── */
+    .timeline { margin-bottom: 8px; }
+    .tl-step { display: flex; gap: 14px; }
+    .tl-left { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; }
+    .tl-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid #30363d;
+      background: #161b22;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .tl-dot.done   { background: #3fb950; border-color: #3fb950; box-shadow: 0 0 8px #3fb95055; }
+    .tl-dot.active { background: #58a6ff; border-color: #58a6ff; animation: tl-blink 1.3s infinite; }
+    .tl-dot.failed { background: #f85149; border-color: #f85149; }
+    @keyframes tl-blink { 0%,100%{box-shadow:0 0 4px #58a6ff44} 50%{box-shadow:0 0 14px #58a6ffaa} }
+    .tl-line { flex: 1; width: 2px; background: #30363d; min-height: 30px; margin: 2px 0; transition: background 0.3s; }
+    .tl-line.done { background: #3fb950; }
+    .tl-body { flex: 1; padding-bottom: 22px; }
+    .tl-name { font-size: 14px; font-weight: 700; color: #484f58; margin-bottom: 2px; transition: color 0.3s; }
+    .tl-name.done   { color: #3fb950; }
+    .tl-name.active { color: #58a6ff; }
+    .tl-name.failed { color: #f85149; }
+    .tl-hint { font-size: 12px; color: #484f58; transition: color 0.3s; }
+    .tl-hint.show { color: #8b949e; }
+
+    /* ── Webhook box ── */
+    .webhook-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a2f1a;
+      border: 1px solid #3fb950;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: #3fb950;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .webhook-badge::before {
+      content: '';
+      width: 8px; height: 8px;
+      background: #3fb950;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #3fb950;
+    }
+    pre.webhook-payload {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .json-key   { color: #79c0ff; }
+    .json-str   { color: #a5d6ff; }
+    .json-num   { color: #ff7b72; }
+    .json-bool  { color: #ff9e64; }
+    .json-null  { color: #8b949e; }
+
+    .webhook-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .webhook-ts { font-size: 12px; color: #8b949e; }
+
+    /* ── Alert ── */
+    .alert-err {
+      background: #2d1215;
+      border: 1px solid #f85149;
+      border-radius: 8px;
+      color: #f85149;
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    /* ── Reset link ── */
+    .reset-row { text-align: center; margin-top: 20px; }
+    .reset-link { font-size: 13px; color: #8b949e; cursor: pointer; text-decoration: underline; }
+    .reset-link:hover { color: #e2e8f0; }
+
+    /* ── Sections ── */
+    .section { display: none; }
+    .section.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>CryptoGateway — Demo Flow</h1>
+  <p>Полный цикл платежа: создание → депозит → подтверждение → вебхук</p>
+  <div class="secret-bar">
+    <input type="password" id="inp-secret" placeholder="Admin Secret" />
+  </div>
+</div>
+
+<!-- Step indicator -->
+<div class="steps-bar">
+  <div class="step-node active" id="sn-1">
+    <div class="step-circle">1</div>
+    <div class="step-label">Создать</div>
+  </div>
+  <div class="step-connector" id="sc-1"></div>
+  <div class="step-node" id="sn-2">
+    <div class="step-circle">2</div>
+    <div class="step-label">Адрес</div>
+  </div>
+  <div class="step-connector" id="sc-2"></div>
+  <div class="step-node" id="sn-3">
+    <div class="step-circle">3</div>
+    <div class="step-label">Статус</div>
+  </div>
+  <div class="step-connector" id="sc-3"></div>
+  <div class="step-node" id="sn-4">
+    <div class="step-circle">4</div>
+    <div class="step-label">Вебхук</div>
+  </div>
+</div>
+
+<!-- ── STEP 1: Create ─────────────────────────────────────────── -->
+<div class="section visible" id="sec-1">
+  <div class="card">
+    <div class="card-title">Шаг 1 — Создать депозитный адрес</div>
+    <div class="card-sub">Передаём запрос: userId пользователя, сеть и токен. Система генерирует уникальный кошелёк.</div>
+    <div id="err-1" class="alert-err"></div>
+    <div class="form-row">
+      <label>User ID</label>
+      <input type="text" id="f-uid" placeholder="Например: user_42" value="demo_user" />
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin-bottom:0">
+        <label>Сеть</label>
+        <select id="f-network">
+          <option value="ETH">ETH (Sepolia)</option>
+          <option value="BSC">BSC</option>
+          <option value="TRON">TRON</option>
+          <option value="SOLANA">Solana</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Токен</label>
+        <select id="f-token">
+          <option value="ETH">ETH</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-create" onclick="createAddress()">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.75 4.75a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5z"/></svg>
+      Создать адрес
+    </button>
+  </div>
+</div>
+
+<!-- ── STEP 2: Address ────────────────────────────────────────── -->
+<div class="section" id="sec-2">
+  <div class="card">
+    <div class="card-title">Шаг 2 — Депозитный адрес готов</div>
+    <div class="card-sub">Отправьте средства на этот адрес. Система автоматически обнаружит транзакцию.</div>
+
+    <div class="meta-row">
+      <div class="meta-chip"><span>User</span><strong id="m-uid">—</strong></div>
+      <div class="meta-chip"><span>Сеть</span><strong id="m-net">—</strong></div>
+      <div class="meta-chip"><span>Токен</span><strong id="m-token">—</strong></div>
+    </div>
+
+    <div class="address-box">
+      <div class="address-label">Депозитный адрес</div>
+      <div class="address-value" id="dep-address">—</div>
+      <div class="address-copy">
+        <span style="font-size:11px;color:#8b949e">Отправьте любую сумму на этот адрес</span>
+        <button class="copy-btn" id="copy-btn" onclick="copyAddress()">Копировать</button>
+      </div>
+    </div>
+
+    <div class="waiting" id="waiting-block">
+      <div class="spin"></div>
+      <span>Ожидаем входящую транзакцию в блокчейне…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── STEP 3: Status ─────────────────────────────────────────── -->
+<div class="section" id="sec-3">
+  <div class="card">
+    <div class="card-title">Шаг 3 — Обработка платежа</div>
+    <div class="card-sub">Платёж обнаружен. Отслеживаем прохождение всех этапов в реальном времени.</div>
+
+    <div class="meta-row" id="s3-meta" style="margin-bottom:18px"></div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+<!-- ── STEP 4: Webhook ────────────────────────────────────────── -->
+<div class="section" id="sec-4">
+  <div class="card">
+    <div class="card-title">Шаг 4 — Вебхук отправлен</div>
+    <div class="card-sub">Платёж завершён. Система автоматически уведомила оператора POST-запросом с подписью.</div>
+
+    <div class="webhook-badge">Доставлен</div>
+
+    <div class="webhook-meta">
+      <span style="font-size:13px;font-weight:600;color:#e2e8f0">POST → <span id="wh-url" style="color:#79c0ff;font-family:monospace;font-size:12px"></span></span>
+      <span class="webhook-ts" id="wh-ts"></span>
+    </div>
+
+    <pre class="webhook-payload" id="wh-payload">—</pre>
+
+    <div class="reset-row">
+      <span class="reset-link" onclick="resetDemo()">↩ Запустить новый платёж</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let state = {
+    secret: '',
+    userId: '',
+    network: '',
+    token: '',
+    address: '',
+    paymentId: null,
+    pollTimer: null,
+    currentStep: 1,
+    addressCreatedAt: null,   // only look at payments AFTER this timestamp
+  };
+
+  const STEPS = [
+    { status: 'DETECTED',  name: 'DETECTED',  hint: 'Входящая транзакция обнаружена в сети. Ожидаем подтверждений.' },
+    { status: 'CONFIRMED', name: 'CONFIRMED', hint: 'Набрано нужное количество блок-подтверждений.' },
+    { status: 'SWEEPING',  name: 'SWEEPING',  hint: 'Средства переводятся с депозитного адреса на мастер-кошелёк.' },
+    { status: 'COMPLETED', name: 'COMPLETED', hint: 'Sweep завершён. Вебхук-уведомление отправлено.' },
+  ];
+  const ORDER = STEPS.map(s => s.status);
+
+  const DECIMALS = { ETH: 18, BNB: 18, TRX: 6, SOL: 9, USDT: 6, USDC: 6 };
+  function fmtAmt(raw, token) {
+    if (!raw || parseFloat(raw) === 0) return '0 ' + (token ?? '');
+    const val = parseFloat(raw) / Math.pow(10, DECIMALS[token] ?? 18);
+    return (val < 0.000001 ? val.toExponential(4) : val.toFixed(8).replace(/\.?0+$/, '')) + ' ' + (token ?? '');
+  }
+
+  // ── Step navigation ────────────────────────────────────────────────────────
+  function goStep(n) {
+    state.currentStep = n;
+    [1,2,3,4].forEach(i => {
+      document.getElementById('sec-' + i).classList.toggle('visible', i === n);
+      const node = document.getElementById('sn-' + i);
+      node.classList.remove('active', 'done');
+      if (i < n) node.classList.add('done');
+      else if (i === n) node.classList.add('active');
+      if (i < 4) {
+        document.getElementById('sc-' + i).classList.toggle('done', i < n);
+      }
+    });
+    // checkmark icons for done steps
+    [1,2,3,4].forEach(i => {
+      const circle = document.querySelector('#sn-' + i + ' .step-circle');
+      if (i < n) circle.innerHTML = '✓';
+      else circle.innerHTML = i;
+    });
+  }
+
+  // ── API helper ─────────────────────────────────────────────────────────────
+  async function api(path, opts = {}) {
+    const secret = document.getElementById('inp-secret').value.trim() || state.secret;
+    state.secret = secret;
+    const res = await fetch('/api/v1' + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': secret, ...(opts.headers || {}) },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || json.error || 'Ошибка ' + res.status);
+    return json;
+  }
+
+  // ── Step 1: Create address ─────────────────────────────────────────────────
+  async function createAddress() {
+    const btn  = document.getElementById('btn-create');
+    const errEl = document.getElementById('err-1');
+    errEl.style.display = 'none';
+
+    const userId  = document.getElementById('f-uid').value.trim();
+    const network = document.getElementById('f-network').value;
+    const token   = document.getElementById('f-token').value;
+
+    if (!userId) { showErr(errEl, 'Введите User ID'); return; }
+    if (!document.getElementById('inp-secret').value.trim()) { showErr(errEl, 'Введите Admin Secret вверху страницы'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin" style="border-top-color:#fff;width:14px;height:14px"></div> Создаём…';
+
+    try {
+      const { data } = await api('/deposits/address', {
+        method: 'POST',
+        body: JSON.stringify({ userId, network, token }),
+      });
+
+      state.userId           = userId;
+      state.network          = network;
+      state.token            = token;
+      state.address          = data.address;
+      state.addressCreatedAt = new Date().toISOString();
+
+      document.getElementById('m-uid').textContent   = userId;
+      document.getElementById('m-net').textContent   = network;
+      document.getElementById('m-token').textContent = token;
+      document.getElementById('dep-address').textContent = data.address;
+
+      goStep(2);
+      startPollingForDetection();
+    } catch (e) {
+      showErr(errEl, e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.75 4.75a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5z"/></svg> Создать адрес';
+    }
+  }
+
+  // deposits endpoint uses no admin-secret
+  async function apiPublic(path, opts = {}) {
+    const res = await fetch('/api/v1' + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || json.error || 'Ошибка ' + res.status);
+    return json.data ?? json;
+  }
+
+  // ── Copy address ───────────────────────────────────────────────────────────
+  function copyAddress() {
+    navigator.clipboard.writeText(state.address);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Скопировано ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Копировать'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  // ── Poll until DETECTED ────────────────────────────────────────────────────
+  function startPollingForDetection() {
+    clearTimers();
+    state.pollTimer = setInterval(async () => {
+      try {
+        const { data } = await api('/admin/payments?userId=' + encodeURIComponent(state.userId) + '&limit=10');
+        if (!data?.length) return;
+        // Only look at payments created after we generated the deposit address
+        const fresh = data.find(p =>
+          ORDER.includes(p.status) &&
+          (!state.addressCreatedAt || new Date(p.createdAt) >= new Date(state.addressCreatedAt))
+        );
+        if (!fresh) return;
+        clearTimers();
+        state.paymentId = fresh.id;
+        goStep(3);
+        renderTimeline(fresh);
+        if (fresh.status !== 'COMPLETED') startPollingStatus();
+        else onCompleted(fresh);
+      } catch (_) {}
+    }, 3000);
+  }
+
+  // ── Poll status ────────────────────────────────────────────────────────────
+  function startPollingStatus() {
+    clearTimers();
+    state.pollTimer = setInterval(async () => {
+      try {
+        const { data } = await api('/admin/payments?userId=' + encodeURIComponent(state.userId) + '&limit=10');
+        if (!data?.length) return;
+        const p = data.find(x => x.id === state.paymentId) ?? data[0];
+        renderTimeline(p);
+        if (p.status === 'COMPLETED' || p.status === 'FAILED') {
+          clearTimers();
+          if (p.status === 'COMPLETED') setTimeout(() => onCompleted(p), 800);
+        }
+      } catch (_) {}
+    }, 3000);
+  }
+
+  // ── Render timeline ────────────────────────────────────────────────────────
+  function renderTimeline(p) {
+    const meta = document.getElementById('s3-meta');
+    meta.innerHTML = `
+      <div class="meta-chip"><span>User</span><strong>${p.userId}</strong></div>
+      <div class="meta-chip"><span>Получено</span><strong style="color:#3fb950">${fmtAmt(p.receivedAmount, p.token)}</strong></div>
+    `;
+
+    const curIdx = p.status === 'FAILED' ? 0 : ORDER.indexOf(p.status);
+    let html = '';
+    STEPS.forEach((step, i) => {
+      const pastDone = p.status === 'COMPLETED' || i < curIdx;
+      const isActive = i === curIdx && p.status !== 'COMPLETED';
+      const isFailed = p.status === 'FAILED' && i === curIdx;
+      const cls = isFailed ? 'failed' : pastDone ? 'done' : isActive ? 'active' : '';
+      const isLast = i === STEPS.length - 1;
+      html += `
+        <div class="tl-step">
+          <div class="tl-left">
+            <div class="tl-dot ${cls}"></div>
+            ${!isLast ? `<div class="tl-line ${pastDone ? 'done' : ''}"></div>` : ''}
+          </div>
+          <div class="tl-body">
+            <div class="tl-name ${cls}">${step.name}</div>
+            <div class="tl-hint ${cls ? 'show' : ''}">${step.hint}</div>
+          </div>
+        </div>`;
+    });
+    document.getElementById('timeline').innerHTML = html;
+  }
+
+  // ── On completed — fetch webhook ───────────────────────────────────────────
+  async function onCompleted(payment) {
+    goStep(4);
+    try {
+      const settings = await api('/admin/settings');
+      document.getElementById('wh-url').textContent = settings.data?.webhookUrl || '(URL не настроен)';
+
+      // Poll webhooks until we find one for this payment
+      let found = null;
+      for (let attempt = 0; attempt < 10 && !found; attempt++) {
+        await sleep(1500);
+        const { data: events } = await api('/admin/webhooks?limit=50');
+        found = events?.find(e => e.paymentId === payment.id && e.deliveredAt);
+        if (!found) found = events?.find(e => e.paymentId === payment.id);
+      }
+
+      if (found) {
+        document.getElementById('wh-ts').textContent = found.deliveredAt
+          ? 'Доставлен: ' + new Date(found.deliveredAt).toLocaleString('ru')
+          : 'В очереди на доставку';
+        document.getElementById('wh-payload').innerHTML = syntaxHighlight(found.payload);
+      } else {
+        document.getElementById('wh-payload').textContent = '(вебхук в очереди, обновите через несколько секунд)';
+      }
+    } catch (e) {
+      document.getElementById('wh-payload').textContent = 'Ошибка загрузки: ' + e.message;
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function clearTimers() {
+    if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+  }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+  function syntaxHighlight(json) {
+    const str = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+        let cls = 'json-num';
+        if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+        else if (/true|false/.test(match)) cls = 'json-bool';
+        else if (/null/.test(match)) cls = 'json-null';
+        return `<span class="${cls}">${match}</span>`;
+      });
+  }
+
+  function resetDemo() {
+    clearTimers();
+    state = { secret: state.secret, userId: '', network: '', token: '', address: '', paymentId: null, pollTimer: null, currentStep: 1 };
+    document.getElementById('f-uid').value = 'demo_user_' + Math.floor(Math.random() * 900 + 100);
+    goStep(1);
+  }
+
+  // Update token options based on network
+  document.getElementById('f-network').addEventListener('change', function() {
+    const net = this.value;
+    const tokenSel = document.getElementById('f-token');
+    const opts = {
+      ETH:    [['ETH','ETH'],['USDT','USDT'],['USDC','USDC']],
+      BSC:    [['BNB','BNB'],['USDT','USDT'],['USDC','USDC']],
+      TRON:   [['TRX','TRX'],['USDT','USDT'],['USDC','USDC']],
+      SOLANA: [['SOL','SOL'],['USDT','USDT'],['USDC','USDC']],
+    };
+    tokenSel.innerHTML = (opts[net] || opts.ETH).map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+  });
+
+  // Pre-fill secret from URL param
+  const params = new URLSearchParams(location.search);
+  if (params.get('secret')) document.getElementById('inp-secret').value = params.get('secret');
+</script>
+</body>
+</html>

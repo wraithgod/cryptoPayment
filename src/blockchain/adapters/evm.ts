@@ -16,11 +16,32 @@ export class EvmAdapter extends BaseAdapter {
   private provider: ethers.JsonRpcProvider;
   private rpcUrl: string;
 
+  // Cache full blocks so multiple wallet scans in the same tick share fetches
+  private blockCache: Map<number, ethers.Block | null> = new Map();
+  private blockCacheExpiry = 0;
+
   constructor(network: Network) {
     super();
     this.network = network;
     this.rpcUrl = network === Network.ETH ? config.rpc.eth : config.rpc.bsc;
-    this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
+    // Specify chainId + disable request batching (batch of 12+ calls can timeout on free RPCs)
+    const chainId = network === Network.ETH ? 11155111 : 56; // Sepolia / BSC Mainnet
+    this.provider = new ethers.JsonRpcProvider(
+      this.rpcUrl,
+      { chainId, name: network.toLowerCase() },
+      { batchMaxCount: 1 },
+    );
+  }
+
+  private async getBlockCached(bn: number): Promise<ethers.Block | null> {
+    if (Date.now() > this.blockCacheExpiry) {
+      this.blockCache.clear();
+      this.blockCacheExpiry = Date.now() + 30_000;
+    }
+    if (this.blockCache.has(bn)) return this.blockCache.get(bn)!;
+    const block = await this.withTimeout(this.provider.getBlock(bn, true));
+    this.blockCache.set(bn, block);
+    return block;
   }
 
   async getBalance(address: string, token: Token): Promise<bigint> {
@@ -89,106 +110,66 @@ export class EvmAdapter extends BaseAdapter {
     return ethers.isAddress(address);
   }
 
-  // Scan address for incoming ERC20 transfers via alchemy_getAssetTransfers (no block-range limit)
+  // ERC-20 incoming transfers via standard eth_getLogs — works on any RPC
   async scanErc20Transfers(
-    _contractAddress: string,
+    contractAddress: string,
     toAddress: string,
     fromBlock: number,
     toBlock: number,
   ): Promise<Array<{ txHash: string; from: string; amount: bigint; blockNumber: number }>> {
-    const body = JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [{
-        fromBlock: '0x' + fromBlock.toString(16),
-        toBlock: '0x' + toBlock.toString(16),
-        toAddress,
-        category: ['erc20'],
-        excludeZeroValue: true,
-        maxCount: '0x64',
-      }],
-      id: 1,
-    });
+    // Transfer(address indexed from, address indexed to, uint256 value)
+    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+    const paddedTo = '0x' + toAddress.slice(2).padStart(64, '0').toLowerCase();
 
-    const res = await fetch(this.rpcUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      signal: AbortSignal.timeout(10000),
-    });
+    const logs = await this.withTimeout(
+      this.provider.getLogs({
+        address: contractAddress,
+        topics: [TRANSFER_TOPIC, null, paddedTo],
+        fromBlock,
+        toBlock,
+      }),
+    );
 
-    const data = await res.json() as {
-      result?: {
-        transfers: Array<{
-          hash: string;
-          from: string;
-          value: number;
-          blockNum: string;
-          rawContract?: { value?: string };
-        }>;
-      };
-    };
-    const transfers = data.result?.transfers ?? [];
-
-    return transfers.map((t) => ({
-      txHash: t.hash,
-      from: t.from,
-      amount: t.rawContract?.value
-        ? BigInt(t.rawContract.value)
-        : ethers.parseUnits(t.value.toFixed(6), 6), // USDT/USDC = 6 decimals fallback
-      blockNumber: parseInt(t.blockNum, 16),
-    }));
+    return logs
+      .filter(l => l.data && l.data !== '0x')
+      .map(l => ({
+        txHash: l.transactionHash,
+        from: '0x' + l.topics[1].slice(26),
+        amount: BigInt(l.data),
+        blockNumber: l.blockNumber,
+      }));
   }
 
-  // Scan native ETH/BNB transfers using alchemy_getAssetTransfers (1 call vs hundreds)
+  // Native ETH/BNB transfers — iterate blocks and filter by recipient address
+  // Block range is typically 1-3 blocks (polled every 15 s, ~12 s/block on ETH)
   async scanNativeTransfers(
     toAddress: string,
     fromBlock: number,
     toBlock: number,
   ): Promise<Array<{ txHash: string; from: string; amount: bigint; blockNumber: number }>> {
-    const body = JSON.stringify({
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [{
-        fromBlock: '0x' + fromBlock.toString(16),
-        toBlock: '0x' + toBlock.toString(16),
-        toAddress,
-        category: ['external'],
-        excludeZeroValue: true,
-        maxCount: '0x64',
-      }],
-      id: 1,
-    });
+    const results: Array<{ txHash: string; from: string; amount: bigint; blockNumber: number }> = [];
+    const addr = toAddress.toLowerCase();
 
-    const res = await fetch(this.rpcUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      signal: AbortSignal.timeout(10000),
-    });
+    // Cap range to avoid accidental full-chain scans on first startup
+    const cappedFrom = Math.max(fromBlock, toBlock - 50);
 
-    const data = await res.json() as {
-      result?: {
-        transfers: Array<{
-          hash: string;
-          from: string;
-          value: number;
-          blockNum: string;
-          rawContract?: { value?: string };
-        }>;
-      };
-    };
-    const transfers = data.result?.transfers ?? [];
+    for (let bn = cappedFrom + 1; bn <= toBlock; bn++) {
+      const block = await this.getBlockCached(bn);
+      if (!block?.prefetchedTransactions) continue;
 
-    return transfers.map((t) => ({
-      txHash: t.hash,
-      from: t.from,
-      // rawContract.value is hex-encoded wei — prefer it over float arithmetic to avoid precision loss
-      amount: t.rawContract?.value
-        ? BigInt(t.rawContract.value)
-        : ethers.parseEther(t.value.toFixed(18)),
-      blockNumber: parseInt(t.blockNum, 16),
-    }));
+      for (const tx of block.prefetchedTransactions) {
+        if (tx.to?.toLowerCase() === addr && tx.value > 0n) {
+          results.push({
+            txHash: tx.hash,
+            from: tx.from,
+            amount: tx.value,
+            blockNumber: bn,
+          });
+        }
+      }
+    }
+
+    return results;
   }
 
   getProvider(): ethers.JsonRpcProvider {

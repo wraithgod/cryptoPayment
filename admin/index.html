@@ -92,6 +92,7 @@
     <div class="tabs">
       <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
       <button class="tab" onclick="showTab('payments')">Payments</button>
+      <button class="tab" onclick="showTab('users')">Users</button>
       <button class="tab" onclick="showTab('webhooks')">Webhooks</button>
       <button class="tab" onclick="showTab('settings')">Settings</button>
     </div>
@@ -110,8 +111,8 @@
           <button class="btn btn-sm" onclick="loadDashboard()">Refresh</button>
         </div>
         <table>
-          <thead><tr><th>ID</th><th>User ID</th><th>Network</th><th>Received</th><th>Fee</th><th>Completed</th></tr></thead>
-          <tbody id="recent-payments-body"><tr><td colspan="6" class="loader">Loading...</td></tr></tbody>
+          <thead><tr><th>ID</th><th>User ID</th><th>Network</th><th>Received</th><th>Completed</th></tr></thead>
+          <tbody id="recent-payments-body"><tr><td colspan="5" class="loader">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -139,12 +140,39 @@
           <thead>
             <tr>
               <th>ID</th><th>User ID</th><th>Network / Token</th><th>Address</th>
-              <th>Received</th><th>Fee</th><th>Status</th><th>Tx Hash</th><th>Created</th>
+              <th>Received</th><th>Status</th><th>Tx Hash</th><th>Created</th>
             </tr>
           </thead>
-          <tbody id="payments-body"><tr><td colspan="9" class="loader">Loading...</td></tr></tbody>
+          <tbody id="payments-body"><tr><td colspan="8" class="loader">Loading...</td></tr></tbody>
         </table>
         <div class="pagination" id="payments-pagination"></div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div id="tab-users" style="display:none">
+      <div class="section-header">
+        <h2>Users &amp; Wallets</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="users-search" type="text" placeholder="Search user ID…" style="background:#1a1f2e;border:1px solid #2d3748;color:#e2e8f0;border-radius:6px;padding:6px 12px;font-size:13px;width:220px" oninput="usersPage=1;loadUsers()">
+          <span id="users-total" style="font-size:13px;color:#718096"></span>
+        </div>
+      </div>
+      <div class="card" style="overflow:auto">
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Network</th>
+              <th>Address</th>
+              <th style="text-align:center">Payments</th>
+              <th style="text-align:center">Completed</th>
+              <th>Wallet created</th>
+            </tr>
+          </thead>
+          <tbody id="users-body"><tr><td colspan="6" class="loader">Loading…</td></tr></tbody>
+        </table>
+        <div class="pagination" id="users-pagination"></div>
       </div>
     </div>
 
@@ -174,10 +202,6 @@
       <div class="card" style="max-width:480px">
         <div id="settings-success" class="alert alert-success">Settings saved successfully.</div>
         <div id="settings-error"  class="alert alert-error"></div>
-        <div class="form-group">
-          <label>Fee % (applied to each payment)</label>
-          <input id="s-fee" type="number" step="0.01" min="0" max="50" placeholder="1.0" />
-        </div>
         <div class="form-group">
           <label>Webhook URL</label>
           <input id="s-webhook" type="url" placeholder="https://your-server.com/webhook" />
@@ -269,7 +293,7 @@
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-  const TAB_NAMES = ['dashboard', 'payments', 'webhooks', 'settings'];
+  const TAB_NAMES = ['dashboard', 'payments', 'users', 'webhooks', 'settings'];
 
   function showTab(tab) {
     TAB_NAMES.forEach((t, i) => {
@@ -278,6 +302,7 @@
     });
     if (tab === 'dashboard') loadDashboard();
     if (tab === 'payments')  { pages.payments = 1; loadPayments(); }
+    if (tab === 'users')     { usersPage = 1; loadUsers(); }
     if (tab === 'webhooks')  { pages.webhooks = 1; loadWebhooks(); }
     if (tab === 'settings')  loadSettings();
   }
@@ -303,7 +328,6 @@
         <td><code style="font-size:11px">${p.userId ?? '—'}</code></td>
         <td><span class="network-badge network-${p.network}">${p.network}</span></td>
         <td class="green" style="font-variant-numeric:tabular-nums">${fmtAmt(p.amount, p.token)}</td>
-        <td style="color:#718096;font-variant-numeric:tabular-nums">${fmtAmt(p.fee, p.token)}</td>
         <td style="color:#718096">${formatDate(p.completedAt)}</td>
       </tr>`).join('');
   }
@@ -360,7 +384,6 @@
         </td>
         <td><code style="font-size:11px" title="${p.address}">${addrShort}</code></td>
         <td class="green" style="font-variant-numeric:tabular-nums;white-space:nowrap">${fmtAmt(p.receivedAmount, p.token)}</td>
-        <td style="color:#718096;font-variant-numeric:tabular-nums;white-space:nowrap">${fmtAmt(p.feeAmount, p.token)}</td>
         <td>${statusBadge(p.status)}</td>
         <td style="white-space:nowrap">${txLink}</td>
         <td style="color:#718096;white-space:nowrap">${formatDate(p.createdAt)}</td>
@@ -368,6 +391,58 @@
     }).join('');
 
     renderPagination('payments', pagination, loadPayments);
+  }
+
+  // ── Users ─────────────────────────────────────────────────────────────────────
+
+  let usersPage = 1;
+  const NETWORK_COLORS = { ETH: '#63b3ed', BSC: '#f6c90e', TRON: '#ef4444', SOLANA: '#a78bfa' };
+
+  async function loadUsers() {
+    const search = document.getElementById('users-search').value.trim();
+    const params = new URLSearchParams({ page: usersPage, limit: 20 });
+    if (search) params.set('search', search);
+
+    const { data, pagination } = await api('/admin/users?' + params);
+    const tbody = document.getElementById('users-body');
+    document.getElementById('users-total').textContent = `${pagination.total} user${pagination.total !== 1 ? 's' : ''}`;
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No users found</td></tr>';
+      document.getElementById('users-pagination').innerHTML = '';
+      return;
+    }
+
+    // One row per wallet; merge userId cell across multiple wallets
+    const rows = [];
+    for (const user of data) {
+      const wallets = user.wallets;
+      wallets.forEach((w, wi) => {
+        const netColor = NETWORK_COLORS[w.network] || '#a0aec0';
+        const userCell = wi === 0
+          ? `<td rowspan="${wallets.length}" style="vertical-align:top;padding-top:12px">
+               <span style="font-family:monospace;font-size:13px">${user.userId}</span>
+               <br><span style="font-size:11px;color:#718096">${user.completedPayments}/${user.totalPayments} completed</span>
+             </td>`
+          : '';
+        rows.push(`<tr>
+          ${userCell}
+          <td><span style="background:${netColor}22;color:${netColor};padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">${w.network}</span></td>
+          <td style="font-family:monospace;font-size:12px">${w.address}</td>
+          <td style="text-align:center">${w.paymentCount}</td>
+          <td style="text-align:center;color:${w.completedCount > 0 ? '#68d391' : '#718096'}">${w.completedCount}</td>
+          <td style="color:#718096;font-size:12px">${new Date(w.createdAt).toLocaleString()}</td>
+        </tr>`);
+      });
+    }
+    tbody.innerHTML = rows.join('');
+
+    // Pagination buttons
+    const pg = document.getElementById('users-pagination');
+    if (pagination.pages <= 1) { pg.innerHTML = ''; return; }
+    pg.innerHTML = Array.from({ length: pagination.pages }, (_, i) => i + 1)
+      .map(p => `<button class="page-btn${p === usersPage ? ' active' : ''}" onclick="usersPage=${p};loadUsers()">${p}</button>`)
+      .join('');
   }
 
   // ── Webhooks ──────────────────────────────────────────────────────────────────
@@ -415,7 +490,6 @@
     document.getElementById('settings-error').style.display   = 'none';
     try {
       const { data } = await api('/admin/settings');
-      document.getElementById('s-fee').value     = data.feePercent ?? '';
       document.getElementById('s-webhook').value = data.webhookUrl ?? '';
       document.getElementById('s-secret').value  = '';
       document.getElementById('settings-updated').textContent =
@@ -434,8 +508,6 @@
     okEl.style.display  = 'none';
 
     const body = {};
-    const fee = parseFloat(document.getElementById('s-fee').value);
-    if (!isNaN(fee)) body.feePercent = fee;
     const webhook = document.getElementById('s-webhook').value.trim();
     body.webhookUrl = webhook || null;
     const secret = document.getElementById('s-secret').value;
@@ -443,7 +515,6 @@
 
     try {
       const { data } = await api('/admin/settings', { method: 'PATCH', body: JSON.stringify(body) });
-      document.getElementById('s-fee').value     = data.feePercent;
       document.getElementById('s-webhook').value = data.webhookUrl ?? '';
       document.getElementById('s-secret').value  = '';
       document.getElementById('settings-updated').textContent = 'Last updated: ' + formatDate(data.updatedAt);

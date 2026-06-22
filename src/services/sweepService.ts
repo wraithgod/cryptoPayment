@@ -4,7 +4,6 @@ import { getAdapter } from '../blockchain/adapters';
 import { EvmAdapter } from '../blockchain/adapters/evm';
 import { userWalletService } from './userWalletService';
 import { paymentService } from './paymentService';
-import { getSettings } from './settingsService';
 import { config } from '../config';
 
 // Conservative gas reserve per network (in native token smallest units).
@@ -65,20 +64,11 @@ export class SweepService {
     // For others: fall back to the static table above.
     const gasReserve = await this.getGasReserve(payment.network, payment.token, adapter);
 
-    const settings = await getSettings();
-    const feePercent = Number(settings.feePercent);
-    const feeAmount = (balance * BigInt(Math.round(feePercent * 100))) / 10000n;
-
-    // Subtract both operator fee and gas from the sweep amount
     const isNative = NATIVE_TOKEN[payment.network] === payment.token;
-    const sweepAmount = isNative
-      ? balance - feeAmount - gasReserve
-      : balance - feeAmount;
+    const sweepAmount = isNative ? balance - gasReserve : balance;
 
     if (sweepAmount <= 0n) {
-      throw new Error(
-        `Balance too low to sweep: balance=${balance}, fee=${feeAmount}, gasReserve=${gasReserve}`,
-      );
+      throw new Error(`Balance too low to sweep: balance=${balance}, gasReserve=${gasReserve}`);
     }
 
     await this.ensureGasIfNeeded(payment.network, payment.token, wallet.address);
@@ -92,10 +82,10 @@ export class SweepService {
 
     await prisma.payment.update({
       where: { id: paymentId },
-      data: { sweepTxHash: txHash, feeAmount: feeAmount.toString() },
+      data: { sweepTxHash: txHash },
     });
 
-    await paymentService.onSweepCompleted(paymentId, txHash, feeAmount);
+    await paymentService.onSweepCompleted(paymentId, txHash, 0n);
   }
 
   // Returns the gas cost to reserve for a native-token sweep transaction.

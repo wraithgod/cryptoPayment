@@ -9,7 +9,6 @@ export async function getSettings() {
 }
 
 export async function updateSettings(data: {
-  feePercent?: number;
   webhookUrl?: string | null;
   webhookSecret?: string | null;
 }) {

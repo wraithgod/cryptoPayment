@@ -184,7 +184,6 @@
         detail = `<div class="detail-box">
           <div class="d-row"><span class="d-lbl">Tx Hash</span><span class="d-val"><a href="${url}" target="_blank">${p.txHash.slice(0,22)}…</a></span></div>
           <div class="d-row"><span class="d-lbl">Сумма</span><span class="d-val green">${fmtAmt(p.receivedAmount, p.token)}</span></div>
-          <div class="d-row"><span class="d-lbl">Комиссия</span><span class="d-val">${fmtAmt(p.feeAmount, p.token)}</span></div>
           <div class="d-row"><span class="d-lbl">Адрес</span><span class="d-val">${p.address ?? '—'}</span></div>
         </div>`;
       }

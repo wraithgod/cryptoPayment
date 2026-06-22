@@ -9,7 +9,6 @@ import { isSafeWebhookUrl } from '../../services/webhookService';
 const MAX_WEBHOOK_REPLAYS = 10;
 
 const updateSettingsSchema = z.object({
-  feePercent: z.number().min(0).max(50).optional(),
   webhookUrl: z.string().url().optional().nullable().refine(
     (url) => !url || isSafeWebhookUrl(url),
     { message: 'Webhook URL must be a public HTTPS URL' },
@@ -42,7 +41,6 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
           network: p.network,
           token: p.token,
           amount: p.receivedAmount.toString(),
-          fee: p.feeAmount.toString(),
           completedAt: p.completedAt,
         })),
       },
@@ -54,7 +52,6 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
     const settings = await getSettings();
     return reply.send({
       data: {
-        feePercent: settings.feePercent.toString(),
         webhookUrl: settings.webhookUrl,
         webhookSecret: settings.webhookSecret ? '***' : null,
         updatedAt: settings.updatedAt,
@@ -71,7 +68,6 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
     const settings = await updateSettings(body.data);
     return reply.send({
       data: {
-        feePercent: settings.feePercent.toString(),
         webhookUrl: settings.webhookUrl,
         webhookSecret: settings.webhookSecret ? '***' : null,
         updatedAt: settings.updatedAt,
@@ -111,9 +107,56 @@ export async function adminRoutes(fastify: FastifyInstance): Promise<void> {
         address: p.userWallet?.address,
         userId: p.userWallet?.userId,
         receivedAmount: p.receivedAmount.toString(),
-        feeAmount: p.feeAmount.toString(),
-        feePercent: p.feePercent.toString(),
       })),
+      pagination: { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) },
+    });
+  });
+
+  fastify.get('/admin/users', async (request, reply) => {
+    const query = z.object({
+      page:   z.coerce.number().int().positive().default(1),
+      limit:  z.coerce.number().int().min(1).max(100).default(20),
+      search: z.string().optional(),
+    }).parse(request.query);
+
+    // Get all wallets with payment status counts
+    const allWallets = await prisma.userWallet.findMany({
+      where: query.search ? { userId: { contains: query.search, mode: 'insensitive' } } : undefined,
+      include: {
+        payments: { select: { status: true, receivedAmount: true, token: true, network: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group wallets by userId
+    const userMap = new Map<string, { createdAt: Date; wallets: typeof allWallets }>();
+    for (const w of allWallets) {
+      if (!userMap.has(w.userId)) userMap.set(w.userId, { createdAt: w.createdAt, wallets: [] });
+      userMap.get(w.userId)!.wallets.push(w);
+    }
+
+    const allUsers = Array.from(userMap.entries()).map(([userId, u]) => ({
+      userId,
+      createdAt: u.createdAt,
+      wallets: u.wallets.map((w) => ({
+        id: w.id,
+        network: w.network,
+        address: w.address,
+        createdAt: w.createdAt,
+        paymentCount: w.payments.length,
+        completedCount: w.payments.filter((p) => p.status === 'COMPLETED').length,
+      })),
+      totalPayments: u.wallets.reduce((s, w) => s + w.payments.length, 0),
+      completedPayments: u.wallets.reduce(
+        (s, w) => s + w.payments.filter((p) => p.status === 'COMPLETED').length, 0,
+      ),
+    }));
+
+    const total = allUsers.length;
+    const data = allUsers.slice((query.page - 1) * query.limit, query.page * query.limit);
+
+    return reply.send({
+      data,
       pagination: { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) },
     });
   });

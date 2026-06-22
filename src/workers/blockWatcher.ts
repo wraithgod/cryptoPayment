@@ -7,7 +7,6 @@ import { solanaAdapter } from '../blockchain/adapters/solana';
 import { paymentService } from '../services/paymentService';
 import { webhookService } from '../services/webhookService';
 import { alertService } from '../services/alertService';
-import { getSettings } from '../services/settingsService';
 import { sweepQueue } from './queue';
 import { config, TOKEN_CONTRACTS, NATIVE_TOKENS, SUPPORTED_TOKENS } from '../config';
 import pino from 'pino';
@@ -26,6 +25,7 @@ export class BlockWatcher {
   private lastScanTimestamps: Map<Network, number> = new Map();
   private running = false;
   private errors: Map<Network, number> = new Map();
+  private requeuedOnStartup: Set<string> = new Set();
 
   async start(): Promise<void> {
     this.running = true;
@@ -101,8 +101,26 @@ export class BlockWatcher {
     }
   }
 
+  // Re-queue sweeps that failed before broadcasting — runs only once per startup per payment
+  private async requeeLostSweeps(network: Network): Promise<void> {
+    const lost = await prisma.payment.findMany({
+      where: {
+        network,
+        sweepTxHash: null,
+        status: { in: [PaymentStatus.CONFIRMED, PaymentStatus.SWEEPING] },
+      },
+    });
+    for (const p of lost) {
+      if (this.requeuedOnStartup.has(p.id)) continue;
+      this.requeuedOnStartup.add(p.id);
+      await sweepQueue.add('sweep', { paymentId: p.id }, { attempts: 5, backoff: { type: 'exponential', delay: 10_000 } });
+      logger.info({ paymentId: p.id, status: p.status }, 'Re-queued lost sweep');
+    }
+  }
+
   private async scanNetwork(network: Network): Promise<void> {
     await this.expireStuckDetected(network);
+    await this.requeeLostSweeps(network);
 
     const [pendingConfirmations, userWallets] = await Promise.all([
       prisma.payment.findMany({
@@ -114,6 +132,13 @@ export class BlockWatcher {
     ]);
 
     if (pendingConfirmations.length === 0 && userWallets.length === 0) return;
+
+    // Track which tokens have active pending payments per wallet (to skip expensive scans)
+    const pendingTokensByWallet = new Map<string, Set<Token>>();
+    for (const p of pendingConfirmations) {
+      if (!pendingTokensByWallet.has(p.userWalletId)) pendingTokensByWallet.set(p.userWalletId, new Set());
+      pendingTokensByWallet.get(p.userWalletId)!.add(p.token as Token);
+    }
 
     const adapter = getAdapter(network);
     const currentBlock = await adapter.getLatestBlock();
@@ -132,7 +157,8 @@ export class BlockWatcher {
       const oldestAge = allDates.length > 0
         ? Math.max(...allDates.map((d) => Date.now() - new Date(d).getTime()))
         : 0;
-      const blocksBack = Math.min(Math.ceil(oldestAge / 1000 / BLOCK_TIMES[network]) + 20, 1000);
+      // Cap at 5 blocks (~60 s) — free public nodes don't serve large archive ranges
+      const blocksBack = Math.min(Math.ceil(oldestAge / 1000 / BLOCK_TIMES[network]) + 2, 5);
       lastScanned = Math.max(0, currentBlock - blocksBack);
       lastTimestamp = Date.now() - oldestAge - 60_000;
     }
@@ -141,8 +167,6 @@ export class BlockWatcher {
       { network, awaitingConfirmation: pendingConfirmations.length, userWallets: userWallets.length, fromBlock: lastScanned, toBlock: currentBlock },
       'Scanning',
     );
-
-    const settings = await getSettings();
 
     for (const payment of pendingConfirmations) {
       try {
@@ -154,7 +178,7 @@ export class BlockWatcher {
 
     for (const userWallet of userWallets) {
       try {
-        await this.checkUserWalletForDeposit(network, userWallet, lastScanned, currentBlock, lastTimestamp, Number(settings.feePercent));
+        await this.checkUserWalletForDeposit(network, userWallet, lastScanned, currentBlock, lastTimestamp, pendingTokensByWallet.get(userWallet.id));
       } catch (err) {
         logger.error({ userWalletId: userWallet.id, userId: userWallet.userId, err }, 'Error checking user wallet');
       }
@@ -174,15 +198,25 @@ export class BlockWatcher {
     fromBlock: number,
     toBlock: number,
     fromTimestamp: number,
-    feePercent: number,
+    activePendingTokens?: Set<Token>,
   ): Promise<void> {
+    const nativeToken = NATIVE_TOKENS[network];
     // Scan every token supported on this network — one address receives all of them
     for (const token of SUPPORTED_TOKENS[network]) {
+      // Native EVM token scan requires fetching full blocks (expensive) — only do it
+      // when there's already a pending payment for this token in this wallet
+      if (token === nativeToken && (network === Network.ETH || network === Network.BSC)) {
+        if (!activePendingTokens?.has(token)) continue;
+      }
       const transfers = await this.findIncomingTransfers(
         network, token, userWallet.address, fromBlock, toBlock, fromTimestamp,
       );
 
       for (const transfer of transfers) {
+        // Skip gas-prefunding transactions sent from our own master wallet
+        const masterAddresses = Object.values(config.masterWallets).map(a => a.toLowerCase());
+        if (transfer.from && masterAddresses.includes(transfer.from.toLowerCase())) continue;
+
         let payment: { id: string };
         try {
           payment = await prisma.payment.create({
@@ -192,7 +226,7 @@ export class BlockWatcher {
               network,
               token,
               receivedAmount: transfer.amount.toString(),
-              feePercent: feePercent.toString(),
+              feePercent: '0',
               status: PaymentStatus.DETECTED,
               txHash: transfer.txHash,
             },
@@ -270,7 +304,7 @@ export class BlockWatcher {
     fromBlock: number,
     toBlock: number,
     fromTimestamp: number,
-  ): Promise<Array<{ txHash: string; amount: bigint }>> {
+  ): Promise<Array<{ txHash: string; amount: bigint; from?: string }>> {
     const nativeToken = NATIVE_TOKENS[network];
 
     if (network === Network.ETH || network === Network.BSC) {

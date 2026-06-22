@@ -32,3 +32,6 @@ diploma*/
 
 # Prisma generated
 prisma/generated/
+
+# Unrelated scripts
+gen_copd_survey.py
