@@ -106,6 +106,7 @@ export function buildServer() {
         connectSrc: ["'self'"],
         imgSrc: ["'self'", 'data:'],
         frameSrc: ["'none'"],
+        upgradeInsecureRequests: null,
       },
     },
   });
